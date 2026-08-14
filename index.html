@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trening Menadžer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-dark:#122A22;
+    --pitch-mid:#1E4D38;
+    --pitch-line:#2C6B4C;
+    --chalk:#F4F1E6;
+    --chalk-dim:#C9C3AD;
+    --accent:#E4C34A;
+    --accent-dim:#B99B2F;
+    --red-card:#C1443B;
+    --green-good:#5FA777;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 50% 0%, #1a3f30 0%, var(--pitch-dark) 55%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 80px);
+    color:var(--chalk);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    margin:0;
+  }
+  .mono{font-family:'Roboto Mono',monospace;}
+
+  /* Layout */
+  .app{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{position:sticky;top:0;z-index:10;display:flex;flex-direction:row;overflow-x:auto;padding:10px;}
+    .sidebar .brand{display:none;}
+    .navbtn{white-space:nowrap;}
+  }
+  .sidebar{
+    background:linear-gradient(180deg,#0F241D,#122A22);
+    border-right:1px solid rgba(255,255,255,0.06);
+    padding:24px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .brand{
+    padding:4px 10px 22px;
+    border-bottom:2px solid var(--accent);
+    margin-bottom:18px;
+  }
+  .brand .display{font-size:20px;color:var(--chalk);}
+  .brand .sub{font-size:11px;color:var(--chalk-dim);letter-spacing:0.08em;margin-top:2px;}
+  .navbtn{
+    background:none;
+    border:none;
+    color:var(--chalk-dim);
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:14px;
+    text-align:left;
+    padding:11px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    transition:background 0.15s, color 0.15s;
+  }
+  .navbtn .num{font-family:'Roboto Mono',monospace;font-size:11px;opacity:0.55;}
+  .navbtn:hover{background:rgba(255,255,255,0.05);color:var(--chalk);}
+  .navbtn.active{background:var(--accent);color:#1a1a1a;font-weight:600;}
+  .navbtn.active .num{opacity:0.6;}
+
+  .main{padding:32px 36px 60px;max-width:1100px;}
+  @media (max-width:760px){.main{padding:20px 16px 50px;}}
+
+  .pagehead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .pagehead h1{font-size:28px;}
+  .pagehead .desc{color:var(--chalk-dim);font-size:13px;margin-top:4px;}
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:var(--shadow);
+  }
+  .card h2{font-size:16px;color:var(--accent);margin-bottom:14px;}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  input, select, textarea{
+    background:rgba(0,0,0,0.25);
+    border:1px solid rgba(255,255,255,0.15);
+    color:var(--chalk);
+    padding:9px 11px;
+    border-radius:7px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+  }
+  input::placeholder{color:var(--chalk-dim);}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+
+  button.btn{
+    background:var(--accent);
+    color:#1a1a1a;
+    border:none;
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    font-weight:600;
+    font-size:13px;
+    padding:10px 16px;
+    border-radius:7px;
+    cursor:pointer;
+    transition:transform 0.1s, background 0.15s;
+  }
+  button.btn:hover{background:#f0d165;}
+  button.btn:active{transform:scale(0.97);}
+  button.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.25);color:var(--chalk);}
+  button.btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  button.btn.danger{background:var(--red-card);color:var(--chalk);}
+  button.icon-btn{
+    background:none;border:none;color:var(--chalk-dim);cursor:pointer;font-size:15px;padding:4px 8px;border-radius:5px;
+  }
+  button.icon-btn:hover{color:var(--red-card);background:rgba(255,255,255,0.06);}
+
+  /* Roster table */
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-family:'Oswald',sans-serif;text-transform:uppercase;
+    font-size:11px;letter-spacing:0.05em;color:var(--chalk-dim);
+    padding:8px 10px;border-bottom:2px solid rgba(255,255,255,0.1);
+  }
+  td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:14px;}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .jersey{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:6px;background:var(--pitch-line);
+    font-family:'Roboto Mono',monospace;font-weight:700;font-size:12px;color:var(--chalk);
+  }
+
+  /* Attendance */
+  .att-date-row{margin-bottom:16px;}
+  .att-grid{display:flex;flex-direction:column;gap:6px;}
+  .att-item{
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 14px;
+    border-left:4px solid transparent;
+  }
+  .att-item.present{border-left-color:var(--green-good);}
+  .att-item.absent{border-left-color:var(--red-card);opacity:0.7;}
+  .att-item .name{font-weight:600;font-size:14px;}
+  .att-toggle{display:flex;gap:6px;}
+  .att-toggle button{
+    border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--chalk-dim);
+    padding:6px 12px;border-radius:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;
+    font-family:'Oswald',sans-serif;cursor:pointer;
+  }
+  .att-toggle button.sel-present.on{background:var(--green-good);color:#0d1f16;border-color:var(--green-good);}
+  .att-toggle button.sel-absent.on{background:var(--red-card);color:var(--chalk);border-color:var(--red-card);}
+  .att-summary{display:flex;gap:18px;margin-top:16px;font-family:'Roboto Mono',monospace;font-size:13px;color:var(--chalk-dim);}
+  .att-summary b{color:var(--accent);}
+
+  /* Session Planner */
+  .session-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .load-tag{padding:4px 10px;border-radius:20px;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;font-family:'Oswald',sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,0.2);}
+  .load-tag.light.on{background:var(--green-good);color:#0d1f16;border-color:var(--green-good);}
+  .load-tag.moderate.on{background:var(--accent);color:#1a1a1a;border-color:var(--accent);}
+  .load-tag.heavy.on{background:var(--red-card);color:var(--chalk);border-color:var(--red-card);}
+
+  .block{
+    display:flex;align-items:center;gap:12px;
+    background:rgba(0,0,0,0.22);border-radius:8px;padding:10px 12px;margin-bottom:8px;
+    border-left:4px solid var(--pitch-line);
+  }
+  .block .handle{cursor:grab;color:var(--chalk-dim);font-size:16px;}
+  .block .binfo{flex:1;}
+  .block .bname{font-weight:600;font-size:14px;}
+  .block .bmeta{font-size:11.5px;color:var(--chalk-dim);margin-top:2px;}
+  .muscle-pill{
+    display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;
+    background:rgba(228,195,74,0.15);color:var(--accent);margin-left:6px;text-transform:uppercase;letter-spacing:0.03em;
+  }
+  .block.dragging{opacity:0.4;}
+
+  .total-time{font-family:'Roboto Mono',monospace;color:var(--accent);font-size:13px;}
+
+  /* Exercise library */
+  .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+  .lib-card{
+    background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.06);
+    cursor:pointer;transition:border-color 0.15s;
+  }
+  .lib-card:hover{border-color:var(--accent);}
+  .lib-card .n{font-weight:600;font-size:14px;}
+  .lib-card .m{font-size:11px;color:var(--accent);text-transform:uppercase;margin-top:4px;}
+  .lib-card .d{font-size:11.5px;color:var(--chalk-dim);margin-top:4px;}
+
+  .empty{color:var(--chalk-dim);font-size:13.5px;padding:16px 4px;font-style:italic;}
+
+  .weekstrip{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;}
+  .daybtn{
+    flex:0 0 auto;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px;padding:10px 14px;cursor:pointer;text-align:center;min-width:64px;
+  }
+  .daybtn .d1{font-size:10px;color:var(--chalk-dim);text-transform:uppercase;font-family:'Oswald',sans-serif;}
+  .daybtn .d2{font-size:16px;font-weight:700;font-family:'Roboto Mono',monospace;}
+  .daybtn.active{background:var(--accent);}
+  .daybtn.active .d1,.daybtn.active .d2{color:#1a1a1a;}
+  .daybtn.has-session{border-bottom:3px solid var(--green-good);}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--accent);color:#1a1a1a;padding:10px 20px;border-radius:8px;
+    font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:12px;letter-spacing:0.03em;
+    opacity:0;pointer-events:none;transition:opacity 0.2s, transform 0.2s;box-shadow:var(--shadow);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media print{
+    .sidebar,.no-print{display:none !important;}
+    body{background:white;color:black;}
+    .card{border:1px solid #ccc;box-shadow:none;}
+  }
+
+  /* Pitch / sketch tool */
+  .pitch-wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;}
+  .pitch-canvas-box{background:#0c1f18;border-radius:10px;padding:10px;border:1px solid rgba(255,255,255,0.1);}
+  #pitch-canvas{display:block;border-radius:6px;touch-action:none;cursor:crosshair;max-width:100%;height:auto;}
+  .pitch-tools{display:flex;flex-direction:column;gap:14px;min-width:180px;flex:1;}
+  .tool-group{display:flex;flex-direction:column;gap:8px;}
+  .tool-label{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:11px;letter-spacing:0.05em;color:var(--chalk-dim);}
+  .swatches{display:flex;gap:8px;}
+  .swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;}
+  .swatch.sel{border-color:var(--accent);transform:scale(1.1);}
+  .width-opts{display:flex;gap:6px;}
+  .width-opts button{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.15);color:var(--chalk);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;}
+  .width-opts button.on{background:var(--accent);color:#1a1a1a;border-color:var(--accent);}
+  .sketch-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:6px;}
+  .sketch-card{background:rgba(0,0,0,0.2);border-radius:8px;padding:8px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;}
+  .sketch-card:hover{border-color:var(--accent);}
+  .sketch-card img{width:100%;border-radius:5px;display:block;background:#0c1f18;}
+  .sketch-card .sn{font-size:11.5px;margin-top:6px;font-weight:600;}
+  .sketch-thumb{width:64px;height:42px;object-fit:cover;border-radius:5px;margin-left:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.15);vertical-align:middle;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal-box{background:var(--pitch-dark);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:16px;max-width:90vw;max-height:90vh;overflow:auto;}
+  .modal-box img{max-width:80vw;max-height:75vh;border-radius:6px;}
+
+  /* Matches */
+  .match-form{display:flex;gap:10px;flex-wrap:wrap;}
+  .match-list{display:flex;flex-direction:column;gap:8px;}
+  .match-item{
+    display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.2);
+    border-radius:8px;padding:12px 14px;border-left:4px solid var(--pitch-line);cursor:pointer;
+  }
+  .match-item:hover{border-left-color:var(--accent);}
+  .match-item.selected{border-left-color:var(--accent);background:rgba(228,195,74,0.08);}
+  .match-item .md{font-family:'Roboto Mono',monospace;font-size:13px;color:var(--accent);min-width:90px;}
+  .match-item .mi{flex:1;padding:0 10px;font-size:14px;font-weight:600;}
+  .badge{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;padding:3px 9px;border-radius:20px;font-family:'Oswald',sans-serif;}
+  .badge.upcoming{background:rgba(95,167,119,0.2);color:var(--green-good);}
+  .badge.played{background:rgba(228,195,74,0.2);color:var(--accent);}
+  .report-row{
+    display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;
+  }
+  .report-row .rname{font-weight:600;font-size:14px;min-width:130px;flex:1;}
+  .fatigue-select{min-width:150px;}
+  .report-row input.note{flex:2;min-width:180px;}
+  .fatigue-badge{font-size:10px;padding:2px 8px;border-radius:10px;text-transform:uppercase;font-family:'Oswald',sans-serif;}
+  .fatigue-1{background:rgba(95,167,119,0.2);color:var(--green-good);}
+  .fatigue-2{background:rgba(228,195,74,0.2);color:var(--accent);}
+  .fatigue-3{background:rgba(193,68,59,0.15);color:#e08078;}
+  .fatigue-4{background:rgba(193,68,59,0.3);color:var(--red-card);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand">
+      <div class="display">Trening Menadžer</div>
+      <div class="sub">Fizička priprema &middot; Spremni za utakmicu</div>
+    </div>
+    <button class="navbtn active" data-tab="roster"><span class="num">01</span> Popis igrača</button>
+    <button class="navbtn" data-tab="attendance"><span class="num">02</span> Evidencija dolazaka</button>
+    <button class="navbtn" data-tab="planner"><span class="num">03</span> Planer treninga</button>
+    <button class="navbtn" data-tab="library"><span class="num">04</span> Baza vježbi</button>
+    <button class="navbtn" data-tab="pitch"><span class="num">05</span> Teren / Skice</button>
+    <button class="navbtn" data-tab="matches"><span class="num">06</span> Utakmice</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- ROSTER -->
+    <section id="tab-roster">
+      <div class="pagehead">
+        <div><h1>Popis igrača</h1><div class="desc">Popis vaše momčadi — dodajte igrače jednom, koristite posvuda.</div></div>
+      </div>
+      <div class="card">
+        <h2>Dodaj igrača</h2>
+        <div class="row">
+          <input id="p-name" placeholder="Ime igrača" style="flex:2;min-width:160px;">
+          <input id="p-number" placeholder="Br." type="number" style="width:70px;">
+          <input id="p-position" placeholder="Pozicija (npr. CB, ST)" style="width:150px;">
+          <button class="btn" onclick="addPlayer()">Dodaj igrača</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Momčad</h2>
+        <table id="roster-table">
+          <thead><tr><th>#</th><th>Ime</th><th>Pozicija</th><th class="no-print"></th></tr></thead>
+          <tbody id="roster-body"></tbody>
+        </table>
+        <div id="roster-empty" class="empty">Još nema igrača — dodajte prvog iznad.</div>
+      </div>
+    </section>
+
+    <!-- ATTENDANCE -->
+    <section id="tab-attendance" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Evidencija dolazaka</h1><div class="desc">Označite tko je došao na trening.</div></div>
+        <input type="date" id="att-date" class="mono">
+      </div>
+      <div class="card">
+        <div class="att-grid" id="att-grid"></div>
+        <div id="att-empty" class="empty">Prvo dodajte igrače na popis.</div>
+        <div class="att-summary" id="att-summary"></div>
+      </div>
+    </section>
+
+    <!-- PLANNER -->
+    <section id="tab-planner" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Planer treninga</h1><div class="desc">Sastavite trening dana, vježbu po vježbu.</div></div>
+        <button class="btn ghost no-print" onclick="window.print()">Ispiši trening</button>
+      </div>
+
+      <div class="weekstrip" id="weekstrip"></div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;" id="planner-date-label">Trening</h2>
+          <span class="total-time" id="planner-total">0 min ukupno</span>
+        </div>
+        <div class="session-meta">
+          <input id="session-type" placeholder="Vrsta treninga (npr. Snaga, Brzina, Oporavak)" style="flex:1;min-width:200px;">
+          <span class="load-tag light" data-load="light" onclick="setLoad('light')">Lagano</span>
+          <span class="load-tag moderate" data-load="moderate" onclick="setLoad('moderate')">Umjereno</span>
+          <span class="load-tag heavy" data-load="heavy" onclick="setLoad('heavy')">Teško</span>
+        </div>
+
+        <div id="blocks-container"></div>
+        <div id="blocks-empty" class="empty">Još nema vježbi — dodajte ih ispod ili iz baze vježbi.</div>
+
+        <div class="row" style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">
+          <input id="block-name" placeholder="Naziv vježbe" style="flex:2;min-width:150px;">
+          <input id="block-muscle" placeholder="Mišić / sposobnost (npr. Kvadriceps, Agilnost)" style="flex:1;min-width:140px;">
+          <input id="block-detail" placeholder="Serije/ponavljanja ili trajanje (npr. 4x8, 20 min)" style="flex:1;min-width:140px;">
+          <input id="block-mins" placeholder="Min" type="number" style="width:70px;">
+          <select id="block-sketch" style="min-width:140px;"><option value="">Bez skice</option></select>
+          <button class="btn" onclick="addBlock()">Dodaj vježbu</button>
+        </div>
+
+        <div class="row no-print" style="margin-top:14px;">
+          <button class="btn ghost" onclick="duplicateFromYesterday()">Kopiraj prethodni trening</button>
+          <button class="btn ghost" onclick="clearSession()">Očisti trening</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIBRARY -->
+    <section id="tab-library" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Baza vježbi</h1><div class="desc">Spremite vježbe koje često koristite — kliknite na jednu u planeru za brzo dodavanje.</div></div>
+      </div>
+      <div class="card">
+        <h2>Dodaj vježbu</h2>
+        <div class="row">
+          <input id="lib-name" placeholder="Naziv vježbe" style="flex:1;min-width:150px;">
+          <input id="lib-muscle" placeholder="Mišić / sposobnost" style="flex:1;min-width:140px;">
+          <input id="lib-detail" placeholder="Uobičajene serije/ponavljanja" style="flex:1;min-width:140px;">
+          <input id="lib-mins" placeholder="Min" type="number" style="width:70px;">
+          <select id="lib-sketch" style="min-width:140px;"><option value="">Bez skice</option></select>
+          <button class="btn" onclick="addLibraryItem()">Spremi</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Spremljene vježbe</h2>
+        <div class="lib-grid" id="lib-grid"></div>
+        <div id="lib-empty" class="empty">Još nema spremljenih vježbi.</div>
+      </div>
+    </section>
+
+    <!-- PITCH / SKETCH -->
+    <section id="tab-pitch" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Teren / Skice</h1><div class="desc">Nacrtaj vježbu na terenu i spremi je — poveži je s vježbom u planeru ili bazi.</div></div>
+      </div>
+      <div class="card">
+        <div class="pitch-wrap">
+          <div class="pitch-canvas-box">
+            <canvas id="pitch-canvas" width="760" height="480"></canvas>
+          </div>
+          <div class="pitch-tools no-print">
+            <div class="tool-group">
+              <div class="tool-label">Boja olovke</div>
+              <div class="swatches" id="swatches"></div>
+            </div>
+            <div class="tool-group">
+              <div class="tool-label">Debljina</div>
+              <div class="width-opts" id="width-opts">
+                <button data-w="2">Tanko</button>
+                <button data-w="4" class="on">Srednje</button>
+                <button data-w="8">Debelo</button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <button class="btn ghost" onclick="undoStroke()">Poništi zadnje</button>
+              <button class="btn ghost" onclick="resetPitch()">Očisti teren</button>
+            </div>
+            <div class="tool-group">
+              <div class="tool-label">Naziv skice</div>
+              <input id="sketch-name" placeholder="npr. Rondo 5v2">
+              <button class="btn" onclick="saveSketch()">Spremi skicu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Spremljene skice</h2>
+        <div class="sketch-gallery" id="sketch-gallery"></div>
+        <div id="sketch-empty" class="empty">Još nema spremljenih skica.</div>
+      </div>
+    </section>
+
+    <!-- MATCHES -->
+    <section id="tab-matches" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Utakmice</h1><div class="desc">Zakaži datume utakmica i nakon svake unesi iscrpljenost igrača.</div></div>
+      </div>
+      <div class="card">
+        <h2>Nova utakmica</h2>
+        <div class="match-form">
+          <input type="date" id="match-date" class="mono">
+          <input id="match-opponent" placeholder="Protivnik" style="flex:1;min-width:160px;">
+          <select id="match-location">
+            <option value="domaca">Domaća</option>
+            <option value="gostujuca">Gostujuća</option>
+          </select>
+          <button class="btn" onclick="addMatch()">Dodaj utakmicu</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Raspored</h2>
+        <div class="match-list" id="match-list"></div>
+        <div id="match-empty" class="empty">Još nema unesenih utakmica.</div>
+      </div>
+      <div class="card" id="match-report-card" style="display:none;">
+        <h2 id="match-report-title">Izvještaj o iscrpljenosti</h2>
+        <div id="match-report-rows"></div>
+        <div id="match-report-empty" class="empty">Dodaj igrače na popis da bi mogao unijeti izvještaj.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal-box"><img id="modal-img" src="" alt="Skica"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- State ----------
+const store = {
+  load(key, fallback){ try{ const v = localStorage.getItem('tm_'+key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  save(key, val){ localStorage.setItem('tm_'+key, JSON.stringify(val)); }
+};
+
+let players = store.load('players', []);
+let attendance = store.load('attendance', {}); // { 'YYYY-MM-DD': { playerId: 'present'|'absent' } }
+let sessions = store.load('sessions', {}); // { 'YYYY-MM-DD': { type, load, blocks:[{id,name,muscle,detail,mins}] } }
+let library = store.load('library', []);
+let sketches = store.load('sketches', []); // {id, name, dataURL}
+let matches = store.load('matches', []); // {id, date, opponent, location, reports:{playerId:{fatigue,note}}}
+
+let currentAttDate = todayISO();
+let currentSessionDate = todayISO();
+let dragIndex = null;
+let selectedMatchId = null;
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+// ---------- Nav ----------
+document.querySelectorAll('.navbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
+    document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+    if(btn.dataset.tab==='attendance') renderAttendance();
+    if(btn.dataset.tab==='planner') renderPlanner();
+    if(btn.dataset.tab==='library') renderLibrary();
+    if(btn.dataset.tab==='pitch') { renderSketchGallery(); }
+    if(btn.dataset.tab==='matches') renderMatches();
+  });
+});
+
+function closeModal(e){
+  if(e.target.id==='modal-bg'){ document.getElementById('modal-bg').classList.remove('show'); }
+}
+function openModal(src){
+  document.getElementById('modal-img').src = src;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+// ---------- Roster ----------
+function addPlayer(){
+  const name = document.getElementById('p-name').value.trim();
+  const number = document.getElementById('p-number').value.trim();
+  const position = document.getElementById('p-position').value.trim();
+  if(!name){ toast('Unesite ime igrača'); return; }
+  players.push({id:uid(), name, number, position});
+  store.save('players', players);
+  document.getElementById('p-name').value='';
+  document.getElementById('p-number').value='';
+  document.getElementById('p-position').value='';
+  renderRoster();
+}
+function removePlayer(id){
+  players = players.filter(p=>p.id!==id);
+  store.save('players', players);
+  renderRoster();
+}
+function renderRoster(){
+  const body = document.getElementById('roster-body');
+  body.innerHTML='';
+  document.getElementById('roster-empty').style.display = players.length ? 'none':'block';
+  players.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="jersey">${p.number||'-'}</span></td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.position||'-')}</td>
+      <td class="no-print"><button class="icon-btn" onclick="removePlayer('${p.id}')">Ukloni</button></td>`;
+    body.appendChild(tr);
+  });
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+// ---------- Attendance ----------
+document.getElementById('att-date').value = currentAttDate;
+document.getElementById('att-date').addEventListener('change', e=>{
+  currentAttDate = e.target.value || todayISO();
+  renderAttendance();
+});
+function setAttendance(playerId, status){
+  if(!attendance[currentAttDate]) attendance[currentAttDate] = {};
+  if(attendance[currentAttDate][playerId] === status){
+    delete attendance[currentAttDate][playerId]; // toggle off
+  } else {
+    attendance[currentAttDate][playerId] = status;
+  }
+  store.save('attendance', attendance);
+  renderAttendance();
+}
+function renderAttendance(){
+  const grid = document.getElementById('att-grid');
+  grid.innerHTML='';
+  document.getElementById('att-empty').style.display = players.length ? 'none':'block';
+  const dayData = attendance[currentAttDate] || {};
+  let present=0, absent=0;
+  players.forEach(p=>{
+    const status = dayData[p.id];
+    if(status==='present') present++;
+    if(status==='absent') absent++;
+    const item = document.createElement('div');
+    item.className = 'att-item ' + (status||'');
+    item.innerHTML = `
+      <span class="name">${escapeHtml(p.name)} ${p.number?'<span class="mono" style="color:var(--chalk-dim);font-size:11px;">#'+p.number+'</span>':''}</span>
+      <div class="att-toggle">
+        <button class="sel-present ${status==='present'?'on':''}" onclick="setAttendance('${p.id}','present')">Prisutan</button>
+        <button class="sel-absent ${status==='absent'?'on':''}" onclick="setAttendance('${p.id}','absent')">Odsutan</button>
+      </div>`;
+    grid.appendChild(item);
+  });
+  document.getElementById('att-summary').innerHTML =
+    players.length ? `<span><b>${present}</b> prisutno</span><span><b>${absent}</b> odsutno</span><span><b>${players.length-present-absent}</b> neoznačeno</span>` : '';
+}
+
+// ---------- Planner ----------
+function renderWeekstrip(){
+  const strip = document.getElementById('weekstrip');
+  strip.innerHTML='';
+  const base = new Date(currentSessionDate+'T00:00:00');
+  const monday = new Date(base); monday.setDate(base.getDate() - ((base.getDay()+6)%7));
+  for(let i=0;i<7;i++){
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    const isMatch = matches.some(m=>m.date===iso);
+    const btn = document.createElement('div');
+    btn.className = 'daybtn' + (iso===currentSessionDate?' active':'') + (sessions[iso]?.blocks?.length?' has-session':'');
+    if(isMatch) btn.style.boxShadow = 'inset 0 0 0 2px var(--red-card)';
+    btn.title = isMatch ? 'Dan utakmice' : '';
+    btn.innerHTML = `<div class="d1">${d.toLocaleDateString('hr-HR',{weekday:'short'})}</div><div class="d2">${d.getDate()}${isMatch?' &#9917;':''}</div>`;
+    btn.onclick = ()=>{ currentSessionDate = iso; renderPlanner(); };
+    strip.appendChild(btn);
+  }
+}
+function getSession(){
+  if(!sessions[currentSessionDate]) sessions[currentSessionDate] = {type:'', load:'moderate', blocks:[]};
+  return sessions[currentSessionDate];
+}
+function setLoad(load){
+  getSession().load = load;
+  store.save('sessions', sessions);
+  renderPlanner();
+}
+function addBlock(){
+  const name = document.getElementById('block-name').value.trim();
+  const muscle = document.getElementById('block-muscle').value.trim();
+  const detail = document.getElementById('block-detail').value.trim();
+  const mins = parseInt(document.getElementById('block-mins').value) || 0;
+  const sketchId = document.getElementById('block-sketch').value;
+  if(!name){ toast('Unesite naziv vježbe'); return; }
+  getSession().blocks.push({id:uid(), name, muscle, detail, mins, sketchId});
+  store.save('sessions', sessions);
+  ['block-name','block-muscle','block-detail','block-mins'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('block-sketch').value='';
+  renderPlanner();
+}
+function removeBlock(id){
+  getSession().blocks = getSession().blocks.filter(b=>b.id!==id);
+  store.save('sessions', sessions);
+  renderPlanner();
+}
+function clearSession(){
+  sessions[currentSessionDate] = {type:'', load:'moderate', blocks:[]};
+  store.save('sessions', sessions);
+  renderPlanner();
+}
+function duplicateFromYesterday(){
+  const dates = Object.keys(sessions).filter(d=>d<currentSessionDate && sessions[d].blocks?.length).sort();
+  if(!dates.length){ toast('Nema ranijeg treninga za kopiranje'); return; }
+  const src = sessions[dates[dates.length-1]];
+  sessions[currentSessionDate] = JSON.parse(JSON.stringify(src));
+  sessions[currentSessionDate].blocks.forEach(b=>b.id=uid());
+  store.save('sessions', sessions);
+  renderPlanner();
+  toast('Kopiran trening od '+dates[dates.length-1]);
+}
+function quickAddFromLibrary(item){
+  currentSessionDate = currentSessionDate;
+  getSession().blocks.push({id:uid(), name:item.name, muscle:item.muscle, detail:item.detail, mins:item.mins||0, sketchId:item.sketchId||''});
+  store.save('sessions', sessions);
+  document.querySelector('[data-tab="planner"]').click();
+  toast('Dodano u trening');
+}
+function sketchThumb(sketchId){
+  if(!sketchId) return '';
+  const sk = sketches.find(s=>s.id===sketchId);
+  if(!sk) return '';
+  return `<img class="sketch-thumb" src="${sk.dataURL}" onclick="openModal('${sk.dataURL}')" title="${escapeHtml(sk.name)}">`;
+}
+function fillSketchSelect(selectEl){
+  const cur = selectEl.value;
+  selectEl.innerHTML = '<option value="">Bez skice</option>' + sketches.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  selectEl.value = cur;
+}
+function renderPlanner(){
+  renderWeekstrip();
+  fillSketchSelect(document.getElementById('block-sketch'));
+  const s = getSession();
+  document.getElementById('session-type').value = s.type || '';
+  document.getElementById('session-type').oninput = e=>{ s.type = e.target.value; store.save('sessions', sessions); };
+  document.querySelectorAll('.load-tag').forEach(t=>t.classList.toggle('on', t.dataset.load===s.load));
+  const d = new Date(currentSessionDate+'T00:00:00');
+  document.getElementById('planner-date-label').textContent = d.toLocaleDateString('hr-HR',{weekday:'long', month:'long', day:'numeric'});
+
+  const container = document.getElementById('blocks-container');
+  container.innerHTML='';
+  document.getElementById('blocks-empty').style.display = s.blocks.length ? 'none':'block';
+  let totalMins = 0;
+  s.blocks.forEach((b, idx)=>{
+    totalMins += (b.mins||0);
+    const el = document.createElement('div');
+    el.className = 'block';
+    el.draggable = true;
+    el.dataset.idx = idx;
+    el.innerHTML = `
+      <span class="handle">&#9776;</span>
+      <div class="binfo">
+        <div class="bname">${escapeHtml(b.name)} ${b.muscle?'<span class="muscle-pill">'+escapeHtml(b.muscle)+'</span>':''}</div>
+        <div class="bmeta">${escapeHtml(b.detail||'')} ${b.mins?' &middot; '+b.mins+' min':''}</div>
+      </div>
+      ${sketchThumb(b.sketchId)}
+      <button class="icon-btn no-print" onclick="removeBlock('${b.id}')">Ukloni</button>`;
+    el.addEventListener('dragstart', ()=>{ dragIndex = idx; el.classList.add('dragging'); });
+    el.addEventListener('dragend', ()=>{ el.classList.remove('dragging'); });
+    el.addEventListener('dragover', e=>e.preventDefault());
+    el.addEventListener('drop', ()=>{
+      if(dragIndex===null || dragIndex===idx) return;
+      const arr = s.blocks;
+      const [moved] = arr.splice(dragIndex,1);
+      arr.splice(idx,0,moved);
+      store.save('sessions', sessions);
+      renderPlanner();
+    });
+    container.appendChild(el);
+  });
+  document.getElementById('planner-total').textContent = totalMins + ' min ukupno';
+}
+
+// ---------- Library ----------
+function addLibraryItem(){
+  const name = document.getElementById('lib-name').value.trim();
+  const muscle = document.getElementById('lib-muscle').value.trim();
+  const detail = document.getElementById('lib-detail').value.trim();
+  const mins = parseInt(document.getElementById('lib-mins').value) || 0;
+  const sketchId = document.getElementById('lib-sketch').value;
+  if(!name){ toast('Unesite naziv vježbe'); return; }
+  library.push({id:uid(), name, muscle, detail, mins, sketchId});
+  store.save('library', library);
+  ['lib-name','lib-muscle','lib-detail','lib-mins'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lib-sketch').value='';
+  renderLibrary();
+}
+function removeLibraryItem(id, ev){
+  ev.stopPropagation();
+  library = library.filter(l=>l.id!==id);
+  store.save('library', library);
+  renderLibrary();
+}
+function renderLibrary(){
+  fillSketchSelect(document.getElementById('lib-sketch'));
+  const grid = document.getElementById('lib-grid');
+  grid.innerHTML='';
+  document.getElementById('lib-empty').style.display = library.length ? 'none':'block';
+  library.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'lib-card';
+    const sk = item.sketchId ? sketches.find(s=>s.id===item.sketchId) : null;
+    el.innerHTML = `${sk?`<img src="${sk.dataURL}" style="width:100%;border-radius:5px;margin-bottom:8px;background:#0c1f18;" onclick="event.stopPropagation();openModal('${sk.dataURL}')">`:''}
+      <div class="n">${escapeHtml(item.name)}</div>
+      <div class="m">${escapeHtml(item.muscle||'')}</div>
+      <div class="d">${escapeHtml(item.detail||'')} ${item.mins?' &middot; '+item.mins+' min':''}</div>
+      <button class="icon-btn no-print" style="margin-top:6px;" onclick="removeLibraryItem('${item.id}', event)">Ukloni</button>`;
+    el.onclick = (e)=>{ if(e.target.tagName==='BUTTON') return; quickAddFromLibrary(item); };
+    grid.appendChild(el);
+  });
+}
+
+// ---------- Pitch / Sketch ----------
+const pitchCanvas = document.getElementById('pitch-canvas');
+const pctx = pitchCanvas.getContext('2d');
+let strokes = []; // {color, width, points:[{x,y}]}
+let currentStroke = null;
+let drawing = false;
+let penColor = '#F4F1E6';
+let penWidth = 4;
+
+function drawPitchBackground(){
+  const w = pitchCanvas.width, h = pitchCanvas.height;
+  pctx.fillStyle = '#1E4D38';
+  pctx.fillRect(0,0,w,h);
+  // subtle mow stripes
+  pctx.fillStyle = 'rgba(255,255,255,0.02)';
+  for(let i=0;i<w;i+=40){ if((i/40)%2===0) pctx.fillRect(i,0,40,h); }
+  pctx.strokeStyle = 'rgba(244,241,230,0.85)';
+  pctx.lineWidth = 2;
+  const m = 18;
+  pctx.strokeRect(m, m, w-2*m, h-2*m);
+  // halfway line
+  pctx.beginPath(); pctx.moveTo(w/2, m); pctx.lineTo(w/2, h-m); pctx.stroke();
+  // center circle
+  pctx.beginPath(); pctx.arc(w/2, h/2, 55, 0, Math.PI*2); pctx.stroke();
+  pctx.beginPath(); pctx.arc(w/2, h/2, 2.5, 0, Math.PI*2); pctx.fillStyle='rgba(244,241,230,0.85)'; pctx.fill();
+  // penalty boxes (left & right)
+  const boxW = 110, boxH = 220, boxY = h/2 - boxH/2;
+  pctx.strokeRect(m, boxY, boxW, boxH);
+  pctx.strokeRect(w-m-boxW, boxY, boxW, boxH);
+  const gBoxW = 45, gBoxH = 100, gBoxY = h/2 - gBoxH/2;
+  pctx.strokeRect(m, gBoxY, gBoxW, gBoxH);
+  pctx.strokeRect(w-m-gBoxW, gBoxY, gBoxW, gBoxH);
+  // penalty spots
+  pctx.beginPath(); pctx.arc(m+80, h/2, 2.5, 0, Math.PI*2); pctx.fill();
+  pctx.beginPath(); pctx.arc(w-m-80, h/2, 2.5, 0, Math.PI*2); pctx.fill();
+  // corner arcs
+  [[m,m,0,Math.PI/2],[w-m,m,Math.PI/2,Math.PI],[m,h-m,-Math.PI/2,0],[w-m,h-m,Math.PI,Math.PI*1.5]].forEach(([cx,cy,a1,a2])=>{
+    pctx.beginPath(); pctx.arc(cx,cy,12,a1,a2); pctx.stroke();
+  });
+}
+function redrawPitch(){
+  drawPitchBackground();
+  strokes.forEach(st=>{
+    if(st.points.length<2) return;
+    pctx.strokeStyle = st.color;
+    pctx.lineWidth = st.width;
+    pctx.lineCap = 'round';
+    pctx.lineJoin = 'round';
+    pctx.beginPath();
+    pctx.moveTo(st.points[0].x, st.points[0].y);
+    st.points.slice(1).forEach(p=>pctx.lineTo(p.x,p.y));
+    pctx.stroke();
+  });
+}
+function getPos(e){
+  const rect = pitchCanvas.getBoundingClientRect();
+  const scaleX = pitchCanvas.width / rect.width;
+  const scaleY = pitchCanvas.height / rect.height;
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+  return { x:(cx-rect.left)*scaleX, y:(cy-rect.top)*scaleY };
+}
+function startDraw(e){
+  e.preventDefault();
+  drawing = true;
+  currentStroke = {color:penColor, width:penWidth, points:[getPos(e)]};
+  strokes.push(currentStroke);
+}
+function moveDraw(e){
+  if(!drawing) return;
+  e.preventDefault();
+  currentStroke.points.push(getPos(e));
+  redrawPitch();
+}
+function endDraw(){ drawing=false; currentStroke=null; }
+pitchCanvas.addEventListener('mousedown', startDraw);
+pitchCanvas.addEventListener('mousemove', moveDraw);
+window.addEventListener('mouseup', endDraw);
+pitchCanvas.addEventListener('touchstart', startDraw, {passive:false});
+pitchCanvas.addEventListener('touchmove', moveDraw, {passive:false});
+pitchCanvas.addEventListener('touchend', endDraw);
+
+const swatchColors = ['#F4F1E6','#E4C34A','#C1443B','#5FA777','#4A90D9'];
+const swatchesEl = document.getElementById('swatches');
+swatchColors.forEach((c,i)=>{
+  const sw = document.createElement('div');
+  sw.className = 'swatch' + (i===0?' sel':'');
+  sw.style.background = c;
+  sw.onclick = ()=>{ penColor=c; document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel')); sw.classList.add('sel'); };
+  swatchesEl.appendChild(sw);
+});
+document.querySelectorAll('#width-opts button').forEach(b=>{
+  b.onclick = ()=>{ penWidth = parseInt(b.dataset.w); document.querySelectorAll('#width-opts button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+});
+function undoStroke(){ strokes.pop(); redrawPitch(); }
+function resetPitch(){ strokes=[]; redrawPitch(); }
+function saveSketch(){
+  const name = document.getElementById('sketch-name').value.trim();
+  if(!name){ toast('Unesite naziv skice'); return; }
+  const dataURL = pitchCanvas.toDataURL('image/png');
+  sketches.push({id:uid(), name, dataURL});
+  store.save('sketches', sketches);
+  document.getElementById('sketch-name').value='';
+  toast('Skica spremljena');
+  renderSketchGallery();
+}
+function deleteSketch(id, ev){
+  ev.stopPropagation();
+  sketches = sketches.filter(s=>s.id!==id);
+  store.save('sketches', sketches);
+  renderSketchGallery();
+}
+function loadSketch(sk){
+  const img = new Image();
+  img.onload = ()=>{ strokes=[]; drawPitchBackground(); pctx.drawImage(img,0,0,pitchCanvas.width,pitchCanvas.height); toast('Skica učitana za uređivanje'); };
+  img.src = sk.dataURL;
+}
+function renderSketchGallery(){
+  const grid = document.getElementById('sketch-gallery');
+  grid.innerHTML='';
+  document.getElementById('sketch-empty').style.display = sketches.length ? 'none':'block';
+  sketches.forEach(sk=>{
+    const el = document.createElement('div');
+    el.className = 'sketch-card';
+    el.innerHTML = `<img src="${sk.dataURL}"><div class="sn">${escapeHtml(sk.name)}</div>
+      <button class="icon-btn no-print" onclick="deleteSketch('${sk.id}', event)">Ukloni</button>`;
+    el.onclick = (e)=>{ if(e.target.tagName==='BUTTON') return; loadSketch(sk); };
+    grid.appendChild(el);
+  });
+}
+drawPitchBackground();
+
+// ---------- Matches ----------
+document.getElementById('match-date').value = todayISO();
+function addMatch(){
+  const date = document.getElementById('match-date').value;
+  const opponent = document.getElementById('match-opponent').value.trim();
+  const location = document.getElementById('match-location').value;
+  if(!date){ toast('Odaberite datum'); return; }
+  if(!opponent){ toast('Unesite protivnika'); return; }
+  matches.push({id:uid(), date, opponent, location, reports:{}});
+  store.save('matches', matches);
+  document.getElementById('match-opponent').value='';
+  renderMatches();
+  toast('Utakmica dodana');
+}
+function removeMatch(id, ev){
+  ev.stopPropagation();
+  matches = matches.filter(m=>m.id!==id);
+  store.save('matches', matches);
+  if(selectedMatchId===id) selectedMatchId=null;
+  renderMatches();
+}
+function selectMatch(id){
+  selectedMatchId = id;
+  renderMatches();
+}
+const fatigueLevels = [
+  {v:'1', label:'Svjež'},
+  {v:'2', label:'Blago umoran'},
+  {v:'3', label:'Umoran'},
+  {v:'4', label:'Jako iscrpljen'}
+];
+function setReportField(matchId, playerId, field, value){
+  const m = matches.find(x=>x.id===matchId);
+  if(!m) return;
+  if(!m.reports[playerId]) m.reports[playerId] = {fatigue:'', note:''};
+  m.reports[playerId][field] = value;
+  store.save('matches', matches);
+}
+function renderMatches(){
+  const list = document.getElementById('match-list');
+  list.innerHTML='';
+  document.getElementById('match-empty').style.display = matches.length ? 'none':'block';
+  const sorted = [...matches].sort((a,b)=>a.date.localeCompare(b.date));
+  sorted.forEach(m=>{
+    const played = m.date < todayISO();
+    const el = document.createElement('div');
+    el.className = 'match-item' + (selectedMatchId===m.id?' selected':'');
+    const dObj = new Date(m.date+'T00:00:00');
+    el.innerHTML = `<span class="md">${dObj.toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'})}</span>
+      <span class="mi">${escapeHtml(m.opponent)} <span style="color:var(--chalk-dim);font-weight:400;font-size:12px;">(${m.location==='domaca'?'domaća':'gostujuća'})</span></span>
+      <span class="badge ${played?'played':'upcoming'}">${played?'Odigrano':'Nadolazeća'}</span>
+      <button class="icon-btn no-print" style="margin-left:10px;" onclick="removeMatch('${m.id}', event)">Ukloni</button>`;
+    el.onclick = ()=>selectMatch(m.id);
+    list.appendChild(el);
+  });
+
+  const reportCard = document.getElementById('match-report-card');
+  const reportRows = document.getElementById('match-report-rows');
+  const reportEmpty = document.getElementById('match-report-empty');
+  reportRows.innerHTML='';
+  if(!selectedMatchId){ reportCard.style.display='none'; return; }
+  const m = matches.find(x=>x.id===selectedMatchId);
+  if(!m){ reportCard.style.display='none'; return; }
+  reportCard.style.display='block';
+  document.getElementById('match-report-title').textContent = 'Izvještaj — ' + m.opponent + ' (' + new Date(m.date+'T00:00:00').toLocaleDateString('hr-HR') + ')';
+  reportEmpty.style.display = players.length ? 'none':'block';
+  players.forEach(p=>{
+    const rep = m.reports[p.id] || {fatigue:'', note:''};
+    const row = document.createElement('div');
+    row.className = 'report-row';
+    row.innerHTML = `
+      <span class="rname">${escapeHtml(p.name)}</span>
+      <select class="fatigue-select" onchange="setReportField('${m.id}','${p.id}','fatigue',this.value); renderMatches();">
+        <option value="">Odaberi razinu</option>
+        ${fatigueLevels.map(f=>`<option value="${f.v}" ${rep.fatigue===f.v?'selected':''}>${f.label}</option>`).join('')}
+      </select>
+      ${rep.fatigue?`<span class="fatigue-badge fatigue-${rep.fatigue}">${fatigueLevels.find(f=>f.v===rep.fatigue).label}</span>`:''}
+      <input class="note" placeholder="Napomena (bol, ozljeda, opterećenje...)" value="${escapeHtml(rep.note||'')}" onchange="setReportField('${m.id}','${p.id}','note',this.value)">
+    `;
+    reportRows.appendChild(row);
+  });
+}
+
+// ---------- Init ----------
+renderRoster();
+renderAttendance();
+renderPlanner();
+renderLibrary();
+</script>
+</body>
+</html>
