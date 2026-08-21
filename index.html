@@ -6,6 +6,8 @@
 <title>Trening Menadžer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --pitch-dark:#122A22;
@@ -87,6 +89,40 @@
   .navbtn:hover{background:rgba(255,255,255,0.05);color:var(--chalk);}
   .navbtn.active{background:var(--accent);color:#1a1a1a;font-weight:600;}
   .navbtn.active .num{opacity:0.6;}
+
+  .sidebar-backup{
+    margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .sidebar-backup .btn{font-size:11px;padding:8px 10px;width:100%;}
+  @media (max-width:760px){
+    .sidebar-backup{
+      margin-top:0;flex-direction:row;border-top:none;border-left:1px solid rgba(255,255,255,0.1);
+      padding-top:0;padding-left:10px;margin-left:4px;
+    }
+    .sidebar-backup .btn{width:auto;white-space:nowrap;}
+  }
+
+  /* Login / profile screen */
+  .login-screen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .login-box{
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:32px;
+    box-shadow:var(--shadow);width:100%;max-width:380px;
+  }
+  .login-box .brand{border-bottom:2px solid var(--accent);margin-bottom:20px;padding:0 0 18px;text-align:center;}
+  .profile-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .profile-btn{width:100%;text-align:center;}
+  .login-divider{text-align:center;color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0;font-family:'Oswald',sans-serif;}
+  .new-profile-form{display:flex;flex-direction:column;gap:8px;}
+  .new-profile-form input{width:100%;}
+  .login-error{color:var(--red-card);font-size:12.5px;margin-top:12px;text-align:center;}
+  #login-stage-pin{display:none;}
+  .login-pin-name{color:var(--accent);font-weight:600;}
+  .active-profile{margin-top:10px;font-size:11px;color:var(--chalk-dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .active-profile b{color:var(--accent);}
 
   .main{padding:32px 36px 60px;max-width:1100px;}
   @media (max-width:760px){.main{padding:20px 16px 50px;}}
@@ -290,15 +326,67 @@
   .fatigue-2{background:rgba(228,195,74,0.2);color:var(--accent);}
   .fatigue-3{background:rgba(193,68,59,0.15);color:#e08078;}
   .fatigue-4{background:rgba(193,68,59,0.3);color:var(--red-card);}
+
+  /* Results / Testing */
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .filter-field{display:flex;flex-direction:column;gap:4px;}
+  .filter-field label{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:10.5px;letter-spacing:0.05em;color:var(--chalk-dim);}
+  .chart-box{background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;margin-top:10px;}
+  #progress-canvas, #compare-canvas{display:block;width:100%;height:auto;max-width:100%;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;}
+  .legend .li{display:flex;align-items:center;gap:6px;color:var(--chalk-dim);}
+  .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .compare-picker{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .compare-check{
+    display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.2);
+    padding:6px 12px;border-radius:20px;font-size:12.5px;cursor:pointer;
+    border:1px solid rgba(255,255,255,0.1);user-select:none;
+  }
+  .compare-check input{margin:0;accent-color:var(--accent);cursor:pointer;}
+  .results-table td{font-size:13px;}
 </style>
 </head>
 <body>
 
-<div class="app">
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="brand">
+      <div class="display">Trening Menadžer</div>
+      <div class="sub">Odaberi profil trenera</div>
+    </div>
+
+    <div id="login-stage-list">
+      <div class="profile-list" id="profile-list"></div>
+      <div class="login-divider">ili</div>
+      <div class="new-profile-form">
+        <input id="new-profile-name" placeholder="Ime trenera">
+        <input id="new-profile-pin" type="password" placeholder="Šifra (PIN)">
+        <button class="btn" onclick="createProfile()">Kreiraj profil</button>
+      </div>
+    </div>
+
+    <div id="login-stage-pin">
+      <div class="desc" style="margin-bottom:10px;">Šifra za <span class="login-pin-name" id="login-pin-name"></span></div>
+      <input id="pin-input" type="password" placeholder="Šifra (PIN)" style="width:100%;margin-bottom:10px;" onkeydown="if(event.key==='Enter') submitPin();">
+      <div class="row" style="gap:8px;">
+        <button class="btn" style="flex:1;" onclick="submitPin()">Uđi</button>
+        <button class="btn ghost" onclick="backToProfileList()">Natrag</button>
+      </div>
+    </div>
+
+    <div id="login-error" class="login-error" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
   <nav class="sidebar">
     <div class="brand">
       <div class="display">Trening Menadžer</div>
       <div class="sub">Fizička priprema &middot; Spremni za utakmicu</div>
+      <div class="active-profile">
+        Prijavljen: <b id="active-profile-name"></b>
+        <button class="icon-btn no-print no-export" style="font-size:10px;padding:2px 6px;" onclick="logout()">Odjava</button>
+      </div>
     </div>
     <button class="navbtn active" data-tab="roster"><span class="num">01</span> Popis igrača</button>
     <button class="navbtn" data-tab="attendance"><span class="num">02</span> Evidencija dolazaka</button>
@@ -306,6 +394,12 @@
     <button class="navbtn" data-tab="library"><span class="num">04</span> Baza vježbi</button>
     <button class="navbtn" data-tab="pitch"><span class="num">05</span> Teren / Skice</button>
     <button class="navbtn" data-tab="matches"><span class="num">06</span> Utakmice</button>
+    <button class="navbtn" data-tab="results"><span class="num">07</span> Rezultati</button>
+    <div class="sidebar-backup">
+      <button class="btn ghost" onclick="exportAllData()">Izvezi backup</button>
+      <button class="btn ghost" onclick="document.getElementById('import-file-input').click()">Uvezi backup</button>
+      <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;" onchange="if(this.files[0]) importAllData(this.files[0]); this.value='';">
+    </div>
   </nav>
 
   <main class="main">
@@ -314,6 +408,7 @@
     <section id="tab-roster">
       <div class="pagehead">
         <div><h1>Popis igrača</h1><div class="desc">Popis vaše momčadi — dodajte igrače jednom, koristite posvuda.</div></div>
+        <button class="btn ghost no-export" onclick="exportSectionPDF('tab-roster','popis-igraca')">Izvezi u PDF</button>
       </div>
       <div class="card">
         <h2>Dodaj igrača</h2>
@@ -338,7 +433,10 @@
     <section id="tab-attendance" style="display:none;">
       <div class="pagehead">
         <div><h1>Evidencija dolazaka</h1><div class="desc">Označite tko je došao na trening.</div></div>
-        <input type="date" id="att-date" class="mono">
+        <div class="row">
+          <input type="date" id="att-date" class="mono">
+          <button class="btn ghost no-export" onclick="exportSectionPDF('tab-attendance','evidencija-dolazaka')">Izvezi u PDF</button>
+        </div>
       </div>
       <div class="card">
         <div class="att-grid" id="att-grid"></div>
@@ -351,7 +449,10 @@
     <section id="tab-planner" style="display:none;">
       <div class="pagehead">
         <div><h1>Planer treninga</h1><div class="desc">Sastavite trening dana, vježbu po vježbu.</div></div>
-        <button class="btn ghost no-print" onclick="window.print()">Ispiši trening</button>
+        <div class="row">
+          <button class="btn ghost no-print no-export" onclick="window.print()">Ispiši trening</button>
+          <button class="btn ghost no-export" onclick="exportSectionPDF('tab-planner','trening-plan')">Izvezi u PDF</button>
+        </div>
       </div>
 
       <div class="row no-print" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
@@ -402,6 +503,7 @@
     <section id="tab-library" style="display:none;">
       <div class="pagehead">
         <div><h1>Baza vježbi</h1><div class="desc">Spremite vježbe koje često koristite — kliknite na jednu u planeru za brzo dodavanje.</div></div>
+        <button class="btn ghost no-export" onclick="exportSectionPDF('tab-library','baza-vjezbi')">Izvezi u PDF</button>
       </div>
       <div class="card">
         <h2>Dodaj vježbu</h2>
@@ -425,6 +527,7 @@
     <section id="tab-pitch" style="display:none;">
       <div class="pagehead">
         <div><h1>Teren / Skice</h1><div class="desc">Nacrtaj vježbu na terenu i spremi je — poveži je s vježbom u planeru ili bazi.</div></div>
+        <button class="btn ghost no-export" onclick="exportSectionPDF('tab-pitch','teren-skice')">Izvezi u PDF</button>
       </div>
       <div class="card">
         <div class="pitch-wrap">
@@ -467,6 +570,7 @@
     <section id="tab-matches" style="display:none;">
       <div class="pagehead">
         <div><h1>Utakmice</h1><div class="desc">Zakaži datume utakmica i nakon svake unesi iscrpljenost igrača.</div></div>
+        <button class="btn ghost no-export" onclick="exportSectionPDF('tab-matches','utakmice')">Izvezi u PDF</button>
       </div>
       <div class="card">
         <h2>Nova utakmica</h2>
@@ -492,6 +596,114 @@
       </div>
     </section>
 
+    <!-- RESULTS / TESTING -->
+    <section id="tab-results" style="display:none;">
+      <div class="pagehead">
+        <div><h1>Rezultati</h1><div class="desc">Prati napredak igrača kroz vježbe i testiranja tijekom vremena.</div></div>
+        <button class="btn ghost no-export" onclick="exportResultsPDF()">Izvezi u PDF</button>
+      </div>
+
+      <div class="card no-export">
+        <h2>Unos rezultata</h2>
+        <div class="row">
+          <select id="res-player" style="min-width:150px;"></select>
+          <input id="res-exercise" list="exercise-suggestions" placeholder="Vježba (npr. Čučanj, Sprint 20m)" style="flex:1;min-width:160px;">
+          <input id="res-muscle" list="muscle-suggestions" placeholder="Mišić / sposobnost" style="flex:1;min-width:140px;">
+          <input id="res-value" type="number" step="0.01" placeholder="Vrijednost" style="width:100px;">
+          <select id="res-unit" style="width:90px;">
+            <option value="kg">kg</option>
+            <option value="reps">ponav.</option>
+            <option value="sec">sek</option>
+            <option value="min">min</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="km/h">km/h</option>
+          </select>
+          <input id="res-date" type="date" class="mono">
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <input id="res-note" placeholder="Napomena (opcionalno)" style="flex:1;min-width:200px;">
+          <button class="btn" onclick="addTestResult()">Dodaj rezultat</button>
+        </div>
+        <datalist id="exercise-suggestions"></datalist>
+        <datalist id="muscle-suggestions"></datalist>
+      </div>
+
+      <div id="results-report">
+        <div class="card">
+          <h2>Napredak igrača kroz vrijeme</h2>
+          <div class="filter-bar" style="margin-bottom:14px;">
+            <div class="filter-field">
+              <label>Igrač</label>
+              <select id="prog-filter-player" onchange="onProgressFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Vježba</label>
+              <select id="prog-filter-exercise" onchange="onProgressFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Mišić / sposobnost</label>
+              <select id="prog-filter-muscle" onchange="onProgressFilterChange()"></select>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="progress-canvas" width="900" height="320"></canvas></div>
+        </div>
+
+        <div class="card">
+          <h2>Usporedba igrača</h2>
+          <div class="filter-bar" style="margin-bottom:14px;">
+            <div class="filter-field">
+              <label>Pozicija</label>
+              <select id="comp-filter-position" onchange="onCompareFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Vježba</label>
+              <select id="comp-filter-exercise" onchange="onCompareFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Mišić / sposobnost</label>
+              <select id="comp-filter-muscle" onchange="onCompareFilterChange()"></select>
+            </div>
+          </div>
+          <div class="desc" style="margin-bottom:6px;">Označi konkretne igrače koje želiš usporediti — npr. 2-3 igrača.</div>
+          <div class="row no-export" style="margin-bottom:10px;">
+            <button class="btn ghost" onclick="selectAllComparePlayers()">Odaberi sve prikazane</button>
+            <button class="btn ghost" onclick="clearComparePlayers()">Očisti odabir</button>
+          </div>
+          <div class="compare-picker" id="compare-player-picker"></div>
+          <div class="chart-box"><canvas id="compare-canvas" width="900" height="320"></canvas></div>
+          <div class="legend" id="compare-legend"></div>
+        </div>
+
+        <div class="card">
+          <h2>Povijest unosa</h2>
+          <div class="filter-bar" style="margin-bottom:14px;">
+            <div class="filter-field">
+              <label>Pozicija</label>
+              <select id="hist-filter-position" onchange="onHistFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Igrač</label>
+              <select id="hist-filter-player" onchange="onHistFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Vježba</label>
+              <select id="hist-filter-exercise" onchange="onHistFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Mišić / sposobnost</label>
+              <select id="hist-filter-muscle" onchange="onHistFilterChange()"></select>
+            </div>
+          </div>
+          <table class="results-table">
+            <thead><tr><th>Datum</th><th>Igrač</th><th>Vježba</th><th>Mišić</th><th>Rezultat</th><th>Napomena</th><th class="no-print no-export"></th></tr></thead>
+            <tbody id="results-body"></tbody>
+          </table>
+          <div id="results-empty" class="empty">Još nema unesenih rezultata.</div>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -503,22 +715,45 @@
 
 <script>
 // ---------- State ----------
+let currentProfileId = null;
 const store = {
-  load(key, fallback){ try{ const v = localStorage.getItem('tm_'+key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
-  save(key, val){ localStorage.setItem('tm_'+key, JSON.stringify(val)); }
+  load(key, fallback){ try{ const v = localStorage.getItem('tm_'+currentProfileId+'_'+key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  save(key, val){ localStorage.setItem('tm_'+currentProfileId+'_'+key, JSON.stringify(val)); }
 };
 
-let players = store.load('players', []);
-let attendance = store.load('attendance', {}); // { 'YYYY-MM-DD': { playerId: 'present'|'absent' } }
-let sessions = store.load('sessions', {}); // { 'YYYY-MM-DD': { type, load, blocks:[{id,name,muscle,detail,mins}] } }
-let library = store.load('library', []);
-let sketches = store.load('sketches', []); // {id, name, dataURL}
-let matches = store.load('matches', []); // {id, date, opponent, location, reports:{playerId:{fatigue,note}}}
+let players = [];
+let attendance = {}; // { 'YYYY-MM-DD': { playerId: 'present'|'absent' } }
+let sessions = {}; // { 'YYYY-MM-DD': { type, load, blocks:[{id,name,muscle,detail,mins}] } }
+let library = [];
+let sketches = []; // {id, name, dataURL}
+let matches = []; // {id, date, opponent, location, reports:{playerId:{fatigue,note}}}
+let testResults = []; // {id, playerId, exercise, muscle, date, value, unit, note}
+function loadProfileData(){
+  players = store.load('players', []);
+  attendance = store.load('attendance', {});
+  sessions = store.load('sessions', {});
+  library = store.load('library', []);
+  sketches = store.load('sketches', []);
+  matches = store.load('matches', []);
+  testResults = store.load('testResults', []);
+}
 
 let currentAttDate = todayISO();
 let currentSessionDate = todayISO();
 let dragIndex = null;
 let selectedMatchId = null;
+let fProgPlayer = 'all';
+let fProgExercise = 'all';
+let fProgMuscle = 'all';
+let fCompPosition = 'all';
+let fCompExercise = 'all';
+let fCompMuscle = 'all';
+let fHistPosition = 'all';
+let fHistPlayer = 'all';
+let fHistExercise = 'all';
+let fHistMuscle = 'all';
+let comparePlayerIds = new Set();
+const CHART_COLORS = ['#E4C34A','#5FA777','#4A90D9','#C1443B','#9B6FD1','#E08E45','#4AC7C0','#D1568E'];
 
 function todayISO(){ return toISOLocal(new Date()); }
 function toISOLocal(d){
@@ -546,6 +781,7 @@ document.querySelectorAll('.navbtn').forEach(btn=>{
     if(btn.dataset.tab==='library') renderLibrary();
     if(btn.dataset.tab==='pitch') { renderSketchGallery(); }
     if(btn.dataset.tab==='matches') renderMatches();
+    if(btn.dataset.tab==='results') renderResultsAll();
   });
 });
 
@@ -1031,11 +1267,529 @@ function renderMatches(){
   });
 }
 
+// ---------- Results / Testing ----------
+document.getElementById('res-date').value = todayISO();
+
+function playerName(id){
+  const p = players.find(x=>x.id===id);
+  return p ? p.name : '(uklonjen igrač)';
+}
+function playerColor(id){
+  const idx = players.findIndex(p=>p.id===id);
+  return CHART_COLORS[(idx<0?0:idx) % CHART_COLORS.length];
+}
+function playerPosition(id){
+  const p = players.find(x=>x.id===id);
+  return p ? (p.position||'') : '';
+}
+function distinctValues(field){
+  const set = new Set();
+  testResults.forEach(r=>{ if(r[field]) set.add(r[field]); });
+  return [...set].sort((a,b)=>a.localeCompare(b,'hr'));
+}
+function distinctPositions(){
+  return [...new Set(players.map(p=>p.position).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'hr'));
+}
+function fillSelectPreserve(selectEl, options, allLabel){
+  const cur = selectEl.value || 'all';
+  selectEl.innerHTML = `<option value="all">${allLabel}</option>` + options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+  selectEl.value = options.includes(cur) || cur==='all' ? cur : 'all';
+}
+function renderResultsPlayerSelects(){
+  const resSel = document.getElementById('res-player');
+  const curRes = resSel.value;
+  resSel.innerHTML = players.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  if(players.some(p=>p.id===curRes)) resSel.value = curRes;
+}
+function fillExerciseMuscleDatalists(){
+  const exercises = distinctValues('exercise');
+  const muscles = distinctValues('muscle');
+  document.getElementById('exercise-suggestions').innerHTML = exercises.map(e=>`<option value="${escapeHtml(e)}">`).join('');
+  document.getElementById('muscle-suggestions').innerHTML = muscles.map(m=>`<option value="${escapeHtml(m)}">`).join('');
+}
+
+// -- Progress chart filters (its own, independent) --
+function renderProgressFilters(){
+  const sel = document.getElementById('prog-filter-player');
+  const cur = sel.value || 'all';
+  sel.innerHTML = '<option value="all">Odaberi igrača</option>' + players.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  sel.value = players.some(p=>p.id===cur) ? cur : 'all';
+  fProgPlayer = sel.value;
+  fillSelectPreserve(document.getElementById('prog-filter-exercise'), distinctValues('exercise'), 'Odaberi vježbu');
+  fillSelectPreserve(document.getElementById('prog-filter-muscle'), distinctValues('muscle'), 'Svi mišići/sposobnosti');
+  fProgExercise = document.getElementById('prog-filter-exercise').value;
+  fProgMuscle = document.getElementById('prog-filter-muscle').value;
+}
+function onProgressFilterChange(){
+  fProgPlayer = document.getElementById('prog-filter-player').value;
+  fProgExercise = document.getElementById('prog-filter-exercise').value;
+  fProgMuscle = document.getElementById('prog-filter-muscle').value;
+  renderProgressChart();
+}
+
+// -- Comparison chart filters (its own, independent) --
+function renderCompareFilters(){
+  fillSelectPreserve(document.getElementById('comp-filter-position'), distinctPositions(), 'Sve pozicije');
+  fCompPosition = document.getElementById('comp-filter-position').value;
+  fillSelectPreserve(document.getElementById('comp-filter-exercise'), distinctValues('exercise'), 'Odaberi vježbu');
+  fillSelectPreserve(document.getElementById('comp-filter-muscle'), distinctValues('muscle'), 'Svi mišići/sposobnosti');
+  fCompExercise = document.getElementById('comp-filter-exercise').value;
+  fCompMuscle = document.getElementById('comp-filter-muscle').value;
+}
+function onCompareFilterChange(){
+  fCompPosition = document.getElementById('comp-filter-position').value;
+  fCompExercise = document.getElementById('comp-filter-exercise').value;
+  fCompMuscle = document.getElementById('comp-filter-muscle').value;
+  renderComparePlayerPicker();
+  renderCompareChart();
+}
+function renderComparePlayerPicker(){
+  const box = document.getElementById('compare-player-picker');
+  const relevant = players.filter(p=> fCompPosition==='all' || p.position===fCompPosition);
+  comparePlayerIds = new Set([...comparePlayerIds].filter(id=>relevant.some(p=>p.id===id)));
+  if(!relevant.length){
+    box.innerHTML = '<div class="empty" style="padding:4px;">Nema igrača za ovu poziciju.</div>';
+    return;
+  }
+  box.innerHTML = relevant.map(p=>`
+    <label class="compare-check">
+      <input type="checkbox" value="${p.id}" ${comparePlayerIds.has(p.id)?'checked':''} onchange="toggleComparePlayer('${p.id}', this.checked)">
+      <span class="dot" style="background:${playerColor(p.id)}"></span>${escapeHtml(p.name)}
+    </label>`).join('');
+}
+function toggleComparePlayer(id, checked){
+  if(checked) comparePlayerIds.add(id); else comparePlayerIds.delete(id);
+  renderCompareChart();
+}
+function selectAllComparePlayers(){
+  const relevant = players.filter(p=> fCompPosition==='all' || p.position===fCompPosition);
+  comparePlayerIds = new Set(relevant.map(p=>p.id));
+  renderComparePlayerPicker();
+  renderCompareChart();
+}
+function clearComparePlayers(){
+  comparePlayerIds = new Set();
+  renderComparePlayerPicker();
+  renderCompareChart();
+}
+
+// -- History table filters (its own, independent) --
+function renderHistFilters(){
+  fillSelectPreserve(document.getElementById('hist-filter-position'), distinctPositions(), 'Sve pozicije');
+  fHistPosition = document.getElementById('hist-filter-position').value;
+  const relevantPlayers = players.filter(p=> fHistPosition==='all' || p.position===fHistPosition);
+  const sel = document.getElementById('hist-filter-player');
+  const cur = sel.value || 'all';
+  sel.innerHTML = '<option value="all">Svi igrači</option>' + relevantPlayers.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  sel.value = (cur==='all' || relevantPlayers.some(p=>p.id===cur)) ? cur : 'all';
+  fHistPlayer = sel.value;
+  fillSelectPreserve(document.getElementById('hist-filter-exercise'), distinctValues('exercise'), 'Sve vježbe');
+  fillSelectPreserve(document.getElementById('hist-filter-muscle'), distinctValues('muscle'), 'Svi mišići/sposobnosti');
+  fHistExercise = document.getElementById('hist-filter-exercise').value;
+  fHistMuscle = document.getElementById('hist-filter-muscle').value;
+}
+function onHistFilterChange(){
+  renderHistFilters();
+  renderResultsTable();
+}
+function addTestResult(){
+  const playerId = document.getElementById('res-player').value;
+  const exercise = document.getElementById('res-exercise').value.trim();
+  const muscle = document.getElementById('res-muscle').value.trim();
+  const value = parseFloat(document.getElementById('res-value').value);
+  const unit = document.getElementById('res-unit').value;
+  const date = document.getElementById('res-date').value || todayISO();
+  const note = document.getElementById('res-note').value.trim();
+  if(!players.length){ toast('Prvo dodajte igrače na popis'); return; }
+  if(!playerId){ toast('Odaberite igrača'); return; }
+  if(!exercise){ toast('Unesite naziv vježbe'); return; }
+  if(isNaN(value)){ toast('Unesite vrijednost rezultata'); return; }
+  testResults.push({id:uid(), playerId, exercise, muscle, date, value, unit, note});
+  store.save('testResults', testResults);
+  document.getElementById('res-exercise').value='';
+  document.getElementById('res-muscle').value='';
+  document.getElementById('res-value').value='';
+  document.getElementById('res-note').value='';
+  toast('Rezultat dodan');
+  renderResultsAll();
+}
+function removeTestResult(id){
+  testResults = testResults.filter(r=>r.id!==id);
+  store.save('testResults', testResults);
+  renderResultsAll();
+}
+function getFilteredResults(){
+  return testResults.filter(r=>
+    (fHistPlayer==='all' || r.playerId===fHistPlayer) &&
+    (fHistExercise==='all' || r.exercise===fHistExercise) &&
+    (fHistMuscle==='all' || r.muscle===fHistMuscle) &&
+    (fHistPosition==='all' || playerPosition(r.playerId)===fHistPosition)
+  );
+}
+function renderResultsTable(){
+  const body = document.getElementById('results-body');
+  body.innerHTML='';
+  const rows = getFilteredResults().slice().sort((a,b)=> b.date.localeCompare(a.date));
+  document.getElementById('results-empty').style.display = rows.length ? 'none':'block';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    const dObj = new Date(r.date+'T00:00:00');
+    tr.innerHTML = `<td class="mono">${dObj.toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>
+      <td>${escapeHtml(playerName(r.playerId))}</td>
+      <td>${escapeHtml(r.exercise)}</td>
+      <td>${escapeHtml(r.muscle||'-')}</td>
+      <td class="mono">${r.value} ${escapeHtml(r.unit)}</td>
+      <td>${escapeHtml(r.note||'')}</td>
+      <td class="no-print no-export"><button class="icon-btn" onclick="removeTestResult('${r.id}')">Ukloni</button></td>`;
+    body.appendChild(tr);
+  });
+}
+
+// ---- Charts (plain canvas line charts) ----
+function drawEmptyChart(canvas, message){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0,0,w,h);
+  ctx.fillStyle = '#C9C3AD';
+  ctx.font = '14px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(message, w/2, h/2);
+}
+function drawLineChart(canvas, series, opts){
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0,0,w,h);
+
+  const padL = 55, padR = 20, padT = 20, padB = 40;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const allPoints = series.flatMap(s=>s.points);
+  if(!allPoints.length){ drawEmptyChart(canvas, opts.emptyMsg || 'Nema podataka'); return; }
+
+  let minV = Math.min(...allPoints.map(p=>p.y));
+  let maxV = Math.max(...allPoints.map(p=>p.y));
+  if(minV===maxV){ minV -= 1; maxV += 1; }
+  const vPad = (maxV-minV)*0.12;
+  minV -= vPad; maxV += vPad;
+
+  const allDates = [...new Set(allPoints.map(p=>p.x))].sort();
+  const dateIdx = d => allDates.indexOf(d);
+  const xFor = d => padL + (allDates.length<=1 ? plotW/2 : (dateIdx(d)/(allDates.length-1))*plotW);
+  const yFor = v => padT + plotH - ((v-minV)/(maxV-minV))*plotH;
+
+  // axes
+  ctx.strokeStyle = 'rgba(244,241,230,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT+plotH); ctx.lineTo(padL+plotW, padT+plotH); ctx.stroke();
+
+  // y gridlines + labels
+  ctx.fillStyle = '#C9C3AD';
+  ctx.font = '11px "Roboto Mono", monospace';
+  ctx.textAlign = 'right';
+  const steps = 4;
+  for(let i=0;i<=steps;i++){
+    const v = minV + (maxV-minV)*(i/steps);
+    const y = yFor(v);
+    ctx.strokeStyle = 'rgba(244,241,230,0.06)';
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+plotW, y); ctx.stroke();
+    ctx.fillText(v.toFixed(1), padL-8, y+4);
+  }
+
+  // x labels (subsample to avoid crowding)
+  ctx.textAlign = 'center';
+  const maxLabels = 8;
+  const step = Math.max(1, Math.ceil(allDates.length/maxLabels));
+  allDates.forEach((d,i)=>{
+    if(i%step!==0 && i!==allDates.length-1) return;
+    const dObj = new Date(d+'T00:00:00');
+    ctx.fillText(dObj.getDate()+'.'+(dObj.getMonth()+1)+'.', xFor(d), padT+plotH+18);
+  });
+
+  // series lines + points
+  series.forEach(s=>{
+    const pts = s.points.slice().sort((a,b)=>a.x.localeCompare(b.x));
+    if(pts.length>1){
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.beginPath();
+      pts.forEach((p,i)=>{ const x=xFor(p.x), y=yFor(p.y); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+      ctx.stroke();
+    }
+    pts.forEach(p=>{
+      const x=xFor(p.x), y=yFor(p.y);
+      ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+      ctx.fillStyle = s.color; ctx.fill();
+      ctx.strokeStyle = '#122A22'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+  });
+
+  if(opts.unit){
+    ctx.fillStyle = '#C9C3AD';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Jedinica: '+opts.unit, padL, 14);
+  }
+}
+function renderProgressChart(){
+  const canvas = document.getElementById('progress-canvas');
+  if(fProgPlayer==='all' || (fProgExercise==='all' && fProgMuscle==='all')){
+    drawEmptyChart(canvas, 'Odaberi igrača, i vježbu ili mišićnu skupinu, za prikaz napretka');
+    return;
+  }
+  const rows = testResults.filter(r=>
+    r.playerId===fProgPlayer &&
+    (fProgExercise==='all' || r.exercise===fProgExercise) &&
+    (fProgMuscle==='all' || r.muscle===fProgMuscle)
+  );
+  const points = rows.map(r=>({x:r.date, y:r.value}));
+  const units = new Set(rows.map(r=>r.unit));
+  const unit = units.size===1 ? [...units][0] : (units.size>1 ? 'razne jedinice' : '');
+  drawLineChart(canvas, [{label:playerName(fProgPlayer), color:playerColor(fProgPlayer), points}], {unit, emptyMsg:'Nema unesenih rezultata za ovaj odabir'});
+}
+function renderCompareChart(){
+  const canvas = document.getElementById('compare-canvas');
+  const legend = document.getElementById('compare-legend');
+  legend.innerHTML='';
+  if(fCompExercise==='all' && fCompMuscle==='all'){
+    drawEmptyChart(canvas, 'Odaberi vježbu ili mišićnu skupinu iznad za usporedbu igrača');
+    return;
+  }
+  if(!comparePlayerIds.size){
+    drawEmptyChart(canvas, 'Označi igrače ispod (npr. 2-3) koje želiš usporediti');
+    return;
+  }
+  const rows = testResults.filter(r=>
+    (fCompExercise==='all' || r.exercise===fCompExercise) &&
+    (fCompMuscle==='all' || r.muscle===fCompMuscle) &&
+    comparePlayerIds.has(r.playerId)
+  );
+  const byPlayer = {};
+  rows.forEach(r=>{ (byPlayer[r.playerId] = byPlayer[r.playerId]||[]).push({x:r.date, y:r.value}); });
+  const series = [...comparePlayerIds].map(pid=>({label:playerName(pid), color:playerColor(pid), points:byPlayer[pid]||[]}));
+  const units = new Set(rows.map(r=>r.unit));
+  const unit = units.size===1 ? [...units][0] : (units.size>1 ? 'razne jedinice' : '');
+  drawLineChart(canvas, series, {unit, emptyMsg:'Nema unesenih rezultata za odabrane igrače'});
+  series.forEach(s=>{
+    const li = document.createElement('div');
+    li.className = 'li';
+    li.innerHTML = `<span class="dot" style="background:${s.color}"></span>${escapeHtml(s.label)}${s.points.length?'':' (nema podataka)'}`;
+    legend.appendChild(li);
+  });
+}
+function renderResultsAll(){
+  renderResultsPlayerSelects();
+  fillExerciseMuscleDatalists();
+  renderProgressFilters();
+  renderCompareFilters();
+  renderComparePlayerPicker();
+  renderHistFilters();
+  renderProgressChart();
+  renderCompareChart();
+  renderResultsTable();
+}
+async function exportSectionPDF(sectionId, filenamePrefix){
+  if(typeof html2canvas==='undefined' || typeof window.jspdf==='undefined'){
+    toast('Potrebna je internet veza za izvoz u PDF');
+    return;
+  }
+  const el = document.getElementById(sectionId);
+  if(!el){ toast('Greška pri izvozu PDF-a'); return; }
+  document.querySelectorAll('.no-export, .no-print').forEach(x=>x.style.visibility='hidden');
+  toast('Izrada PDF-a...');
+  try{
+    const canvas = await html2canvas(el, {backgroundColor:'#122A22', scale:2});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+      heightLeft -= pageHeight;
+    }
+    pdf.save(filenamePrefix+'-'+todayISO()+'.pdf');
+  } catch(err){
+    toast('Greška pri izvozu PDF-a');
+  } finally {
+    document.querySelectorAll('.no-export, .no-print').forEach(x=>x.style.visibility='visible');
+  }
+}
+function exportResultsPDF(){
+  exportSectionPDF('results-report','izvjestaj-rezultati');
+}
+
+// ---------- Backup: Export / Import all data ----------
+function exportAllData(){
+  const data = {
+    app: 'trening-menadzer',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    players, attendance, sessions, library, sketches, matches, testResults
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'trening-menadzer-backup-'+todayISO()+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('Backup preuzet');
+}
+function importAllData(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    let data;
+    try{
+      data = JSON.parse(e.target.result);
+    }catch(err){
+      toast('Neispravan backup fajl');
+      return;
+    }
+    if(!data || typeof data !== 'object'){
+      toast('Neispravan backup fajl');
+      return;
+    }
+    const ok = confirm('Ovo će zamijeniti SVE trenutne podatke (igrače, treninge, rezultate, sve) podacima iz ovog backupa. Nastaviti?');
+    if(!ok) return;
+    players = Array.isArray(data.players) ? data.players : [];
+    attendance = data.attendance && typeof data.attendance==='object' ? data.attendance : {};
+    sessions = data.sessions && typeof data.sessions==='object' ? data.sessions : {};
+    library = Array.isArray(data.library) ? data.library : [];
+    sketches = Array.isArray(data.sketches) ? data.sketches : [];
+    matches = Array.isArray(data.matches) ? data.matches : [];
+    testResults = Array.isArray(data.testResults) ? data.testResults : [];
+    store.save('players', players);
+    store.save('attendance', attendance);
+    store.save('sessions', sessions);
+    store.save('library', library);
+    store.save('sketches', sketches);
+    store.save('matches', matches);
+    store.save('testResults', testResults);
+    comparePlayerIds = new Set();
+    renderRoster();
+    renderAttendance();
+    renderPlanner();
+    renderLibrary();
+    renderSketchGallery();
+    renderMatches();
+    renderResultsAll();
+    toast('Podaci uspješno uvezeni');
+  };
+  reader.readAsText(file);
+}
+
+// ---------- Profiles / Login ----------
+function getProfileRegistry(){
+  try{ const v = localStorage.getItem('tm_profiles_registry'); return v ? JSON.parse(v) : []; }catch(e){ return []; }
+}
+function saveProfileRegistry(reg){ localStorage.setItem('tm_profiles_registry', JSON.stringify(reg)); }
+function renderLoginScreen(){
+  const registry = getProfileRegistry();
+  const list = document.getElementById('profile-list');
+  list.innerHTML = registry.length
+    ? registry.map(p=>`<button class="btn ghost profile-btn" onclick="selectProfile('${p.id}')">${escapeHtml(p.name)}</button>`).join('')
+    : '<div class="empty" style="padding:4px;">Još nema kreiranih profila — kreiraj prvi ispod.</div>';
+}
+function showLoginError(msg){
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function selectProfile(id){
+  const prof = getProfileRegistry().find(p=>p.id===id);
+  if(!prof) return;
+  document.getElementById('login-stage-list').style.display = 'none';
+  document.getElementById('login-stage-pin').style.display = 'block';
+  document.getElementById('login-pin-name').textContent = prof.name;
+  document.getElementById('login-error').style.display = 'none';
+  const pinInput = document.getElementById('pin-input');
+  pinInput.value = '';
+  pinInput.dataset.profileId = id;
+  pinInput.focus();
+}
+function backToProfileList(){
+  document.getElementById('login-stage-list').style.display = 'block';
+  document.getElementById('login-stage-pin').style.display = 'none';
+  document.getElementById('login-error').style.display = 'none';
+}
+function submitPin(){
+  const input = document.getElementById('pin-input');
+  const id = input.dataset.profileId;
+  const prof = getProfileRegistry().find(p=>p.id===id);
+  if(!prof) return;
+  if(input.value !== prof.pin){
+    showLoginError('Pogrešna šifra.');
+    return;
+  }
+  loginAs(prof.id);
+}
+function createProfile(){
+  const name = document.getElementById('new-profile-name').value.trim();
+  const pin = document.getElementById('new-profile-pin').value.trim();
+  if(!name){ showLoginError('Unesi ime.'); return; }
+  if(!pin){ showLoginError('Unesi šifru.'); return; }
+  const registry = getProfileRegistry();
+  if(registry.some(p=>p.name.toLowerCase()===name.toLowerCase())){
+    showLoginError('Profil s tim imenom već postoji.');
+    return;
+  }
+  const id = uid();
+  registry.push({id, name, pin});
+  saveProfileRegistry(registry);
+  document.getElementById('new-profile-name').value = '';
+  document.getElementById('new-profile-pin').value = '';
+  loginAs(id);
+}
+function loginAs(id){
+  const prof = getProfileRegistry().find(p=>p.id===id);
+  currentProfileId = id;
+  sessionStorage.setItem('tm_current_profile', id);
+  loadProfileData();
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'grid';
+  document.getElementById('active-profile-name').textContent = prof ? prof.name : '';
+  initAppUI();
+}
+function logout(){
+  currentProfileId = null;
+  sessionStorage.removeItem('tm_current_profile');
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  backToProfileList();
+  document.getElementById('new-profile-name').value = '';
+  document.getElementById('new-profile-pin').value = '';
+  renderLoginScreen();
+}
+function initAppUI(){
+  renderRoster();
+  renderAttendance();
+  renderPlanner();
+  renderLibrary();
+}
+
 // ---------- Init ----------
-renderRoster();
-renderAttendance();
-renderPlanner();
-renderLibrary();
+renderLoginScreen();
+(function(){
+  const savedId = sessionStorage.getItem('tm_current_profile');
+  if(savedId && getProfileRegistry().some(p=>p.id===savedId)){
+    loginAs(savedId);
+  }
+})();
 </script>
 </body>
 </html>
