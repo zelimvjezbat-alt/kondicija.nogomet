@@ -344,6 +344,27 @@
   }
   .compare-check input{margin:0;accent-color:var(--accent);cursor:pointer;}
   .results-table td{font-size:13px;}
+
+  /* Standardni testovi (presets) */
+  .test-preset-chip{
+    padding:5px 12px;border-radius:20px;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:0.03em;font-family:'Oswald',sans-serif;cursor:pointer;
+    border:1px solid rgba(255,255,255,0.2);color:var(--chalk-dim);background:transparent;
+  }
+  .test-preset-chip:hover{border-color:#9B6FD1;color:#9B6FD1;}
+  .test-preset-chip.on{background:#9B6FD1;color:#fff;border-color:#9B6FD1;}
+  .vo2-hint{font-size:11.5px;color:#9B6FD1;font-family:'Roboto Mono',monospace;}
+  .preset-hint{font-size:11.5px;color:var(--chalk-dim);margin:-4px 0 8px;font-style:italic;}
+  .pending-tag{
+    font-size:10.5px;padding:2px 9px;border-radius:10px;text-transform:uppercase;
+    letter-spacing:0.03em;font-family:'Oswald',sans-serif;
+    background:rgba(95,167,119,0.18);color:var(--green-good);font-style:normal;
+  }
+  .plan-tag{
+    font-size:9.5px;padding:1px 7px;border-radius:9px;text-transform:uppercase;
+    letter-spacing:0.03em;font-family:'Oswald',sans-serif;margin-left:6px;
+    background:rgba(155,111,209,0.18);color:#9B6FD1;font-style:normal;
+  }
 </style>
 </head>
 <body>
@@ -486,7 +507,13 @@
         <div class="row" style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;">
           <input id="block-name" placeholder="Naziv vježbe" style="flex:2;min-width:150px;">
           <input id="block-muscle" placeholder="Mišić / sposobnost (npr. Kvadriceps, Agilnost)" style="flex:1;min-width:140px;">
-          <input id="block-detail" placeholder="Serije/ponavljanja ili trajanje (npr. 4x8, 20 min)" style="flex:1;min-width:140px;">
+          <input id="block-reps" placeholder="Ponavljanja" type="number" style="width:100px;">
+          <input id="block-value" placeholder="Kilaža/metri" type="number" step="0.5" style="width:110px;">
+          <select id="block-unit" style="width:75px;">
+            <option value="kg">kg</option>
+            <option value="m">m</option>
+            <option value="sec">sek</option>
+          </select>
           <input id="block-mins" placeholder="Min" type="number" style="width:70px;">
           <select id="block-sketch" style="min-width:140px;"><option value="">Bez skice</option></select>
           <button class="btn" onclick="addBlock()">Dodaj vježbu</button>
@@ -510,7 +537,13 @@
         <div class="row">
           <input id="lib-name" placeholder="Naziv vježbe" style="flex:1;min-width:150px;">
           <input id="lib-muscle" placeholder="Mišić / sposobnost" style="flex:1;min-width:140px;">
-          <input id="lib-detail" placeholder="Uobičajene serije/ponavljanja" style="flex:1;min-width:140px;">
+          <input id="lib-reps" placeholder="Ponavljanja" type="number" style="width:100px;">
+          <input id="lib-value" placeholder="Kilaža/metri" type="number" step="0.5" style="width:110px;">
+          <select id="lib-unit" style="width:75px;">
+            <option value="kg">kg</option>
+            <option value="m">m</option>
+            <option value="sec">sek</option>
+          </select>
           <input id="lib-mins" placeholder="Min" type="number" style="width:70px;">
           <select id="lib-sketch" style="min-width:140px;"><option value="">Bez skice</option></select>
           <button class="btn" onclick="addLibraryItem()">Spremi</button>
@@ -605,11 +638,13 @@
 
       <div class="card no-export">
         <h2>Unos rezultata</h2>
+        <div class="row" id="test-presets" style="margin-bottom:6px;"></div>
+        <div id="preset-hint" class="preset-hint" style="display:none;"></div>
         <div class="row">
           <select id="res-player" style="min-width:150px;"></select>
-          <input id="res-exercise" list="exercise-suggestions" placeholder="Vježba (npr. Čučanj, Sprint 20m)" style="flex:1;min-width:160px;">
+          <input id="res-exercise" list="exercise-suggestions" placeholder="Vježba (npr. Čučanj, Sprint 20m)" style="flex:1;min-width:160px;" oninput="onExerciseManualEdit()">
           <input id="res-muscle" list="muscle-suggestions" placeholder="Mišić / sposobnost" style="flex:1;min-width:140px;">
-          <input id="res-value" type="number" step="0.01" placeholder="Vrijednost" style="width:100px;">
+          <input id="res-value" type="number" step="0.01" placeholder="Vrijednost" style="width:100px;" oninput="updateVo2Hint()">
           <select id="res-unit" style="width:90px;">
             <option value="kg">kg</option>
             <option value="reps">ponav.</option>
@@ -618,8 +653,10 @@
             <option value="cm">cm</option>
             <option value="m">m</option>
             <option value="km/h">km/h</option>
+            <option value="razina">razina</option>
           </select>
           <input id="res-date" type="date" class="mono">
+          <span id="vo2-hint" class="vo2-hint"></span>
         </div>
         <div class="row" style="margin-top:8px;">
           <input id="res-note" placeholder="Napomena (opcionalno)" style="flex:1;min-width:200px;">
@@ -673,6 +710,26 @@
           <div class="compare-picker" id="compare-player-picker"></div>
           <div class="chart-box"><canvas id="compare-canvas" width="900" height="320"></canvas></div>
           <div class="legend" id="compare-legend"></div>
+        </div>
+
+        <div class="card">
+          <h2>Rang lista — usporedba po vježbi</h2>
+          <div class="desc" style="margin-bottom:6px;">Npr. odaberi "Sprint 20m" da odmah vidiš kojem igraču treba najmanje vremena (najnoviji unos po igraču, poredano od najboljeg).</div>
+          <div class="filter-bar" style="margin-bottom:14px;">
+            <div class="filter-field">
+              <label>Vježba</label>
+              <select id="rank-filter-exercise" onchange="onRankFilterChange()"></select>
+            </div>
+            <div class="filter-field">
+              <label>Pozicija</label>
+              <select id="rank-filter-position" onchange="onRankFilterChange()"></select>
+            </div>
+          </div>
+          <table class="results-table">
+            <thead><tr><th>#</th><th>Igrač</th><th>Rezultat</th><th>Datum</th><th>Napomena</th></tr></thead>
+            <tbody id="rank-body"></tbody>
+          </table>
+          <div id="rank-empty" class="empty">Odaberi vježbu za usporedbu.</div>
         </div>
 
         <div class="card">
@@ -752,8 +809,73 @@ let fHistPosition = 'all';
 let fHistPlayer = 'all';
 let fHistExercise = 'all';
 let fHistMuscle = 'all';
+let fRankExercise = 'all';
+let fRankPosition = 'all';
 let comparePlayerIds = new Set();
 const CHART_COLORS = ['#E4C34A','#5FA777','#4A90D9','#C1443B','#9B6FD1','#E08E45','#4AC7C0','#D1568E'];
+
+// Standardni kondicijski testovi — brzi predlošci za dosljedan unos (isti naziv/jedinica svaki put,
+// što je bitno za filtriranje i grafove napretka koji grupiraju po točnom nazivu vježbe).
+const STANDARD_TESTS = [
+  { key:'yoyo',    name:'Yo-Yo test',           muscle:'Aerobni kapacitet', unit:'m',   hint:'Unesi ukupnu prijeđenu udaljenost (m). Razinu (npr. 17.2) upiši u napomenu.' },
+  { key:'cooper',  name:'Cooper test (12 min)',  muscle:'Aerobni kapacitet', unit:'m',   hint:'Unesi prijeđenu udaljenost u 12 minuta (m) — VO2max se računa automatski.' },
+  { key:'sprint20',name:'Sprint 20m',            muscle:'Brzina',            unit:'sec', hint:'Vrijeme u sekundama.' },
+  { key:'sprint40',name:'Sprint 40m',            muscle:'Brzina',            unit:'sec', hint:'Vrijeme u sekundama.' },
+  { key:'agility', name:'Agility 5-10-5',        muscle:'Agilnost',          unit:'sec', hint:'Vrijeme u sekundama (promjena smjera).' },
+  { key:'jump',    name:'Skok (CMJ)',            muscle:'Eksplozivnost',     unit:'cm',  hint:'Visina skoka u centimetrima.' },
+];
+let activeTestPreset = null;
+
+function vo2maxCooper(distanceM){
+  if(!distanceM || isNaN(distanceM)) return null;
+  return (distanceM - 504.9) / 44.73;
+}
+function renderTestPresets(){
+  const box = document.getElementById('test-presets');
+  box.innerHTML = STANDARD_TESTS.map(t =>
+    `<span class="test-preset-chip ${activeTestPreset===t.key?'on':''}" data-key="${t.key}" onclick="applyTestPreset('${t.key}')">${escapeHtml(t.name)}</span>`
+  ).join('');
+}
+function applyTestPreset(key){
+  const t = STANDARD_TESTS.find(x=>x.key===key);
+  if(!t) return;
+  activeTestPreset = key;
+  document.getElementById('res-exercise').value = t.name;
+  document.getElementById('res-muscle').value = t.muscle;
+  document.getElementById('res-unit').value = t.unit;
+  const hintEl = document.getElementById('preset-hint');
+  hintEl.textContent = t.hint;
+  hintEl.style.display = 'block';
+  renderTestPresets();
+  updateVo2Hint();
+  document.getElementById('res-value').focus();
+}
+function onExerciseManualEdit(){
+  const current = document.getElementById('res-exercise').value;
+  const match = STANDARD_TESTS.find(t=>t.name===current);
+  if(!match){
+    activeTestPreset = null;
+    document.getElementById('preset-hint').style.display = 'none';
+    document.getElementById('vo2-hint').textContent = '';
+    renderTestPresets();
+  }
+}
+function updateVo2Hint(){
+  const hintEl = document.getElementById('vo2-hint');
+  if(activeTestPreset === 'cooper'){
+    const val = parseFloat(document.getElementById('res-value').value);
+    const vo2 = vo2maxCooper(val);
+    hintEl.textContent = vo2 ? 'VO2max ≈ ' + vo2.toFixed(1) + ' ml/kg/min' : '';
+  } else {
+    hintEl.textContent = '';
+  }
+}
+function resetTestPreset(){
+  activeTestPreset = null;
+  document.getElementById('preset-hint').style.display = 'none';
+  document.getElementById('vo2-hint').textContent = '';
+  renderTestPresets();
+}
 
 function todayISO(){ return toISOLocal(new Date()); }
 function toISOLocal(d){
@@ -826,6 +948,49 @@ function renderRoster(){
 }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
+// ---------- Prisutnost -> Rezultati (automatski prazni redovi) ----------
+// Kad je igrač prisutan na treningu koji ima plan (blokove vježbi), za svaku vježbu iz plana
+// napravi se prazan red u Rezultatima (bez vrijednosti) — trener ga samo dopuni brojkom poslije.
+// Ako igrač nije prisutan, ništa se ne stvara; ako se prisutnost naknadno skine, prazni (još
+// neispunjeni) redovi se uklanjaju — već upisani rezultati se NIKAD ne brišu automatski.
+function createPlaceholderResult(playerId, date, blockName, blockMuscle, blockValue, blockUnit, blockReps){
+  if(!blockName) return false;
+  const exists = testResults.some(r=>r.playerId===playerId && r.date===date && r.exercise===blockName);
+  if(exists) return false;
+  const hasValue = blockValue!==undefined && blockValue!==null && blockValue!=='' && !isNaN(blockValue) && Number(blockValue)>0;
+  const repsNote = blockReps ? blockReps+' ponavljanja' : '';
+  // Carry the plan's chosen unit (kg/m/sec) even when no target value was set, so a coach who leaves
+  // a time-based exercise blank (times vary per player) still gets the right unit pre-filled when
+  // they later fill in each player's individual number.
+  testResults.push({
+    id: uid(), playerId, exercise: blockName, muscle: blockMuscle||'', date,
+    value: hasValue ? Number(blockValue) : null,
+    unit: blockUnit || (hasValue ? 'kg' : ''),
+    note: repsNote, fromSession: true
+  });
+  return true;
+}
+function createPlaceholderResultsForSession(playerId, date){
+  const session = sessions[date];
+  if(!session || !session.blocks || !session.blocks.length) return;
+  let added = false;
+  session.blocks.forEach(b=>{ if(createPlaceholderResult(playerId, date, b.name, b.muscle, b.value, b.unit, b.reps)) added = true; });
+  if(added) store.save('testResults', testResults);
+}
+function createPlaceholdersForBlock(date, blockName, blockMuscle, blockValue, blockUnit, blockReps){
+  const dayAtt = attendance[date] || {};
+  let added = false;
+  Object.keys(dayAtt).forEach(playerId=>{
+    if(dayAtt[playerId] === 'present' && createPlaceholderResult(playerId, date, blockName, blockMuscle, blockValue, blockUnit, blockReps)) added = true;
+  });
+  if(added) store.save('testResults', testResults);
+}
+function removeEmptyPlaceholderResults(playerId, date){
+  const before = testResults.length;
+  testResults = testResults.filter(r => !(r.playerId===playerId && r.date===date && r.fromSession));
+  if(testResults.length !== before) store.save('testResults', testResults);
+}
+
 // ---------- Attendance ----------
 document.getElementById('att-date').value = currentAttDate;
 document.getElementById('att-date').addEventListener('change', e=>{
@@ -834,12 +999,19 @@ document.getElementById('att-date').addEventListener('change', e=>{
 });
 function setAttendance(playerId, status){
   if(!attendance[currentAttDate]) attendance[currentAttDate] = {};
+  const wasPresent = attendance[currentAttDate][playerId] === 'present';
   if(attendance[currentAttDate][playerId] === status){
     delete attendance[currentAttDate][playerId]; // toggle off
   } else {
     attendance[currentAttDate][playerId] = status;
   }
   store.save('attendance', attendance);
+  const isPresentNow = attendance[currentAttDate][playerId] === 'present';
+  if(isPresentNow && !wasPresent){
+    createPlaceholderResultsForSession(playerId, currentAttDate);
+  } else if(!isPresentNow && wasPresent){
+    removeEmptyPlaceholderResults(playerId, currentAttDate);
+  }
   renderAttendance();
 }
 function renderAttendance(){
@@ -918,27 +1090,51 @@ function setLoad(load){
   store.save('sessions', sessions);
   renderPlanner();
 }
+function blockDetailText(b){
+  if(b.value!==undefined && b.value!==null && b.value!==''){
+    const reps = b.reps ? b.reps+' × ' : '';
+    return reps + b.value + ' ' + (b.unit||'kg');
+  }
+  return b.detail || '';
+}
 function addBlock(){
   const name = document.getElementById('block-name').value.trim();
   const muscle = document.getElementById('block-muscle').value.trim();
-  const detail = document.getElementById('block-detail').value.trim();
+  const reps = parseInt(document.getElementById('block-reps').value) || 0;
+  const value = document.getElementById('block-value').value.trim();
+  const unit = document.getElementById('block-unit').value;
   const mins = parseInt(document.getElementById('block-mins').value) || 0;
   const sketchId = document.getElementById('block-sketch').value;
   if(!name){ toast('Unesite naziv vježbe'); return; }
-  getSession().blocks.push({id:uid(), name, muscle, detail, mins, sketchId});
+  getSession().blocks.push({id:uid(), name, muscle, reps, value: value===''?null:parseFloat(value), unit, mins, sketchId});
   store.save('sessions', sessions);
-  ['block-name','block-muscle','block-detail','block-mins'].forEach(id=>document.getElementById(id).value='');
+  createPlaceholdersForBlock(currentSessionDate, name, muscle, value===''?null:parseFloat(value), unit, reps);
+  ['block-name','block-muscle','block-reps','block-value','block-mins'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('block-sketch').value='';
   renderPlanner();
 }
 function removeBlock(id){
-  getSession().blocks = getSession().blocks.filter(b=>b.id!==id);
+  const s = getSession();
+  const removed = s.blocks.find(b=>b.id===id);
+  s.blocks = s.blocks.filter(b=>b.id!==id);
   store.save('sessions', sessions);
+  if(removed){
+    const before = testResults.length;
+    testResults = testResults.filter(r => !(r.date===currentSessionDate && r.exercise===removed.name && r.fromSession));
+    if(testResults.length !== before) store.save('testResults', testResults);
+  }
   renderPlanner();
 }
 function clearSession(){
+  const oldBlocks = (sessions[currentSessionDate] && sessions[currentSessionDate].blocks) || [];
   sessions[currentSessionDate] = {type:'', load:'moderate', blocks:[]};
   store.save('sessions', sessions);
+  if(oldBlocks.length){
+    const names = new Set(oldBlocks.map(b=>b.name));
+    const before = testResults.length;
+    testResults = testResults.filter(r => !(r.date===currentSessionDate && names.has(r.exercise) && r.fromSession));
+    if(testResults.length !== before) store.save('testResults', testResults);
+  }
   renderPlanner();
 }
 function duplicateFromYesterday(){
@@ -948,13 +1144,15 @@ function duplicateFromYesterday(){
   sessions[currentSessionDate] = JSON.parse(JSON.stringify(src));
   sessions[currentSessionDate].blocks.forEach(b=>b.id=uid());
   store.save('sessions', sessions);
+  sessions[currentSessionDate].blocks.forEach(b=>createPlaceholdersForBlock(currentSessionDate, b.name, b.muscle, b.value, b.unit, b.reps));
   renderPlanner();
   toast('Kopiran trening od '+dates[dates.length-1]);
 }
 function quickAddFromLibrary(item){
   currentSessionDate = currentSessionDate;
-  getSession().blocks.push({id:uid(), name:item.name, muscle:item.muscle, detail:item.detail, mins:item.mins||0, sketchId:item.sketchId||''});
+  getSession().blocks.push({id:uid(), name:item.name, muscle:item.muscle, reps:item.reps||0, value:item.value!=null?item.value:null, unit:item.unit||'kg', mins:item.mins||0, sketchId:item.sketchId||''});
   store.save('sessions', sessions);
+  createPlaceholdersForBlock(currentSessionDate, item.name, item.muscle, item.value, item.unit, item.reps);
   document.querySelector('[data-tab="planner"]').click();
   toast('Dodano u trening');
 }
@@ -993,7 +1191,7 @@ function renderPlanner(){
       <span class="handle">&#9776;</span>
       <div class="binfo">
         <div class="bname">${escapeHtml(b.name)} ${b.muscle?'<span class="muscle-pill">'+escapeHtml(b.muscle)+'</span>':''}</div>
-        <div class="bmeta">${escapeHtml(b.detail||'')} ${b.mins?' &middot; '+b.mins+' min':''}</div>
+        <div class="bmeta">${escapeHtml(blockDetailText(b))} ${b.mins?' &middot; '+b.mins+' min':''}</div>
       </div>
       ${sketchThumb(b.sketchId)}
       <button class="icon-btn no-print" onclick="removeBlock('${b.id}')">Ukloni</button>`;
@@ -1017,13 +1215,15 @@ function renderPlanner(){
 function addLibraryItem(){
   const name = document.getElementById('lib-name').value.trim();
   const muscle = document.getElementById('lib-muscle').value.trim();
-  const detail = document.getElementById('lib-detail').value.trim();
+  const reps = parseInt(document.getElementById('lib-reps').value) || 0;
+  const value = document.getElementById('lib-value').value.trim();
+  const unit = document.getElementById('lib-unit').value;
   const mins = parseInt(document.getElementById('lib-mins').value) || 0;
   const sketchId = document.getElementById('lib-sketch').value;
   if(!name){ toast('Unesite naziv vježbe'); return; }
-  library.push({id:uid(), name, muscle, detail, mins, sketchId});
+  library.push({id:uid(), name, muscle, reps, value: value===''?null:parseFloat(value), unit, mins, sketchId});
   store.save('library', library);
-  ['lib-name','lib-muscle','lib-detail','lib-mins'].forEach(id=>document.getElementById(id).value='');
+  ['lib-name','lib-muscle','lib-reps','lib-value','lib-mins'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('lib-sketch').value='';
   renderLibrary();
 }
@@ -1045,7 +1245,7 @@ function renderLibrary(){
     el.innerHTML = `${sk?`<img src="${sk.dataURL}" style="width:100%;border-radius:5px;margin-bottom:8px;background:#0c1f18;" onclick="event.stopPropagation();openModal('${sk.dataURL}')">`:''}
       <div class="n">${escapeHtml(item.name)}</div>
       <div class="m">${escapeHtml(item.muscle||'')}</div>
-      <div class="d">${escapeHtml(item.detail||'')} ${item.mins?' &middot; '+item.mins+' min':''}</div>
+      <div class="d">${escapeHtml(blockDetailText(item))} ${item.mins?' &middot; '+item.mins+' min':''}</div>
       <button class="icon-btn no-print" style="margin-top:6px;" onclick="removeLibraryItem('${item.id}', event)">Ukloni</button>`;
     el.onclick = (e)=>{ if(e.target.tagName==='BUTTON') return; quickAddFromLibrary(item); };
     grid.appendChild(el);
@@ -1392,6 +1592,70 @@ function onHistFilterChange(){
   renderHistFilters();
   renderResultsTable();
 }
+
+// -- Rang lista: usporedba igrača po jednoj vježbi (npr. vrijeme sprinta), najnoviji unos po igraču --
+function renderRankFilters(){
+  fillSelectPreserve(document.getElementById('rank-filter-exercise'), distinctValues('exercise'), 'Odaberi vježbu');
+  fillSelectPreserve(document.getElementById('rank-filter-position'), distinctPositions(), 'Sve pozicije');
+  fRankExercise = document.getElementById('rank-filter-exercise').value;
+  fRankPosition = document.getElementById('rank-filter-position').value;
+}
+function onRankFilterChange(){
+  fRankExercise = document.getElementById('rank-filter-exercise').value;
+  fRankPosition = document.getElementById('rank-filter-position').value;
+  renderRankTable();
+}
+function renderRankTable(){
+  const body = document.getElementById('rank-body');
+  body.innerHTML = '';
+  if(fRankExercise==='all'){
+    document.getElementById('rank-empty').style.display = 'block';
+    document.getElementById('rank-empty').textContent = 'Odaberi vježbu za usporedbu.';
+    return;
+  }
+  const relevantPlayers = players.filter(p=> fRankPosition==='all' || p.position===fRankPosition);
+  const latestByPlayer = new Map();
+  testResults.forEach(r=>{
+    if(r.exercise!==fRankExercise || r.value===null || r.value===undefined) return;
+    if(fRankPosition!=='all' && playerPosition(r.playerId)!==fRankPosition) return;
+    const existing = latestByPlayer.get(r.playerId);
+    if(!existing || r.date > existing.date) latestByPlayer.set(r.playerId, r);
+  });
+  const rows = relevantPlayers
+    .map(p=>latestByPlayer.get(p.id))
+    .filter(Boolean)
+    .sort((a,b)=> a.value - b.value);
+  document.getElementById('rank-empty').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('rank-empty').textContent = 'Još nema unesenih rezultata za ovu vježbu.';
+  rows.forEach((r, idx)=>{
+    const dObj = new Date(r.date+'T00:00:00');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="mono">${idx+1}.</td>
+      <td>${escapeHtml(playerName(r.playerId))}</td>
+      <td class="mono">${r.value} ${escapeHtml(r.unit)}</td>
+      <td class="mono">${dObj.toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>
+      <td>${escapeHtml(r.note||'')}</td>`;
+    body.appendChild(tr);
+  });
+}
+let editingResultId = null;
+function editResult(resultId){
+  const r = testResults.find(x=>x.id===resultId);
+  if(!r) return;
+  resetTestPreset();
+  editingResultId = resultId;
+  document.getElementById('res-player').value = r.playerId;
+  document.getElementById('res-exercise').value = r.exercise;
+  document.getElementById('res-muscle').value = r.muscle || '';
+  document.getElementById('res-value').value = (r.value!==null && r.value!==undefined) ? r.value : '';
+  document.getElementById('res-unit').value = r.unit || 'kg';
+  document.getElementById('res-date').value = r.date;
+  document.getElementById('res-note').value = r.note || '';
+  const valueEl = document.getElementById('res-value');
+  valueEl.scrollIntoView({behavior:'smooth', block:'center'});
+  valueEl.focus();
+  toast('Uredi rezultat — '+playerName(r.playerId)+' · '+r.exercise);
+}
 function addTestResult(){
   const playerId = document.getElementById('res-player').value;
   const exercise = document.getElementById('res-exercise').value.trim();
@@ -1399,22 +1663,39 @@ function addTestResult(){
   const value = parseFloat(document.getElementById('res-value').value);
   const unit = document.getElementById('res-unit').value;
   const date = document.getElementById('res-date').value || todayISO();
-  const note = document.getElementById('res-note').value.trim();
+  let note = document.getElementById('res-note').value.trim();
   if(!players.length){ toast('Prvo dodajte igrače na popis'); return; }
   if(!playerId){ toast('Odaberite igrača'); return; }
   if(!exercise){ toast('Unesite naziv vježbe'); return; }
   if(isNaN(value)){ toast('Unesite vrijednost rezultata'); return; }
-  testResults.push({id:uid(), playerId, exercise, muscle, date, value, unit, note});
+  if(activeTestPreset==='cooper' && !/vo2max/i.test(note)){
+    const vo2 = vo2maxCooper(value);
+    if(vo2) note = (note ? note+' — ' : '') + 'VO2max ≈ '+vo2.toFixed(1)+' ml/kg/min';
+  }
+  const wasEditing = !!editingResultId;
+  if(wasEditing){
+    const r = testResults.find(x=>x.id===editingResultId);
+    if(r){
+      r.playerId = playerId; r.exercise = exercise; r.muscle = muscle;
+      r.value = value; r.unit = unit; r.date = date; r.note = note;
+      delete r.fromSession;
+    }
+    editingResultId = null;
+  } else {
+    testResults.push({id:uid(), playerId, exercise, muscle, date, value, unit, note});
+  }
   store.save('testResults', testResults);
   document.getElementById('res-exercise').value='';
   document.getElementById('res-muscle').value='';
   document.getElementById('res-value').value='';
   document.getElementById('res-note').value='';
-  toast('Rezultat dodan');
+  resetTestPreset();
+  toast(wasEditing ? 'Rezultat popunjen' : 'Rezultat dodan');
   renderResultsAll();
 }
 function removeTestResult(id){
   testResults = testResults.filter(r=>r.id!==id);
+  if(editingResultId===id) editingResultId = null;
   store.save('testResults', testResults);
   renderResultsAll();
 }
@@ -1434,13 +1715,21 @@ function renderResultsTable(){
   rows.forEach(r=>{
     const tr = document.createElement('tr');
     const dObj = new Date(r.date+'T00:00:00');
+    const isEmpty = r.value===null || r.value===undefined;
+    const isFromPlan = !!r.fromSession && !isEmpty;
+    const valueCell = isEmpty
+      ? '<span class="pending-tag">&#10003; Odrađeno</span>'
+      : `${r.value} ${escapeHtml(r.unit)}${isFromPlan ? '<span class="plan-tag" title="Automatski preuzeto iz plana treninga">plan</span>' : ''}`;
     tr.innerHTML = `<td class="mono">${dObj.toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>
       <td>${escapeHtml(playerName(r.playerId))}</td>
       <td>${escapeHtml(r.exercise)}</td>
       <td>${escapeHtml(r.muscle||'-')}</td>
-      <td class="mono">${r.value} ${escapeHtml(r.unit)}</td>
+      <td class="mono">${valueCell}</td>
       <td>${escapeHtml(r.note||'')}</td>
-      <td class="no-print no-export"><button class="icon-btn" onclick="removeTestResult('${r.id}')">Ukloni</button></td>`;
+      <td class="no-print no-export">
+        <button class="icon-btn" onclick="editResult('${r.id}')" title="Uredi rezultat">✎ ${isEmpty?'Dodaj broj':'Uredi'}</button>
+        <button class="icon-btn" onclick="removeTestResult('${r.id}')">Ukloni</button>
+      </td>`;
     body.appendChild(tr);
   });
 }
@@ -1544,7 +1833,8 @@ function renderProgressChart(){
   const rows = testResults.filter(r=>
     r.playerId===fProgPlayer &&
     (fProgExercise==='all' || r.exercise===fProgExercise) &&
-    (fProgMuscle==='all' || r.muscle===fProgMuscle)
+    (fProgMuscle==='all' || r.muscle===fProgMuscle) &&
+    r.value!==null && r.value!==undefined
   );
   const points = rows.map(r=>({x:r.date, y:r.value}));
   const units = new Set(rows.map(r=>r.unit));
@@ -1566,7 +1856,8 @@ function renderCompareChart(){
   const rows = testResults.filter(r=>
     (fCompExercise==='all' || r.exercise===fCompExercise) &&
     (fCompMuscle==='all' || r.muscle===fCompMuscle) &&
-    comparePlayerIds.has(r.playerId)
+    comparePlayerIds.has(r.playerId) &&
+    r.value!==null && r.value!==undefined
   );
   const byPlayer = {};
   rows.forEach(r=>{ (byPlayer[r.playerId] = byPlayer[r.playerId]||[]).push({x:r.date, y:r.value}); });
@@ -1582,15 +1873,18 @@ function renderCompareChart(){
   });
 }
 function renderResultsAll(){
+  renderTestPresets();
   renderResultsPlayerSelects();
   fillExerciseMuscleDatalists();
   renderProgressFilters();
   renderCompareFilters();
   renderComparePlayerPicker();
   renderHistFilters();
+  renderRankFilters();
   renderProgressChart();
   renderCompareChart();
   renderResultsTable();
+  renderRankTable();
 }
 async function exportSectionPDF(sectionId, filenamePrefix){
   if(typeof html2canvas==='undefined' || typeof window.jspdf==='undefined'){
