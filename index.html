@@ -453,21 +453,6 @@
         font-size: 13px;
         margin: -6px 0 16px;
       }
-      .matchday-lock {
-        background: rgba(228, 195, 74, 0.12);
-        border: 1px solid rgba(228, 195, 74, 0.35);
-        color: var(--accent);
-        border-radius: 8px;
-        padding: 12px 16px;
-        font-size: 13px;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .matchday-lock b {
-        color: var(--chalk);
-      }
       .load-tag {
         padding: 4px 10px;
         border-radius: 20px;
@@ -1026,9 +1011,6 @@
       .fatigue-select {
         min-width: 150px;
       }
-      .report-row input.mins-played {
-        width: 90px;
-      }
       .report-row input.note {
         flex: 2;
         min-width: 180px;
@@ -1370,10 +1352,6 @@
             </div>
           </div>
           <div class="card">
-            <div id="att-matchday-notice" class="matchday-lock" style="display: none">
-              &#9917; Na ovaj datum je upisana utakmica — evidencija dolazaka za trening je onemogućena za taj dan.
-              Minutažu i zamor igrača unesite u izvještaju utakmice (kartica Utakmice).
-            </div>
             <div class="att-grid" id="att-grid"></div>
             <div id="att-empty" class="empty">Prvo dodajte igrače na popis.</div>
             <div class="att-summary" id="att-summary"></div>
@@ -1413,26 +1391,19 @@
               <h2 style="margin: 0" id="planner-date-label">Trening</h2>
               <span class="total-time" id="planner-total">0 min ukupno</span>
             </div>
-            <div id="planner-matchday-notice" class="matchday-lock" style="display: none">
-              &#9917; Na ovaj datum je upisana utakmica — planiranje treninga je onemogućeno za taj dan. Minutažu i
-              zamor igrača unesite u izvještaju utakmice (kartica Utakmice).
+            <div class="session-meta">
+              <input
+                id="session-type"
+                placeholder="Vrsta treninga (npr. Snaga, Brzina, Oporavak)"
+                style="flex: 1; min-width: 200px"
+              />
+              <span class="load-tag light" data-load="light" onclick="setLoad('light')">Lagano</span>
+              <span class="load-tag moderate" data-load="moderate" onclick="setLoad('moderate')">Umjereno</span>
+              <span class="load-tag heavy" data-load="heavy" onclick="setLoad('heavy')">Teško</span>
             </div>
-            <div id="planner-editable-1">
-              <div class="session-meta">
-                <input
-                  id="session-type"
-                  placeholder="Vrsta treninga (npr. Snaga, Brzina, Oporavak)"
-                  style="flex: 1; min-width: 200px"
-                />
-                <span class="load-tag light" data-load="light" onclick="setLoad('light')">Lagano</span>
-                <span class="load-tag moderate" data-load="moderate" onclick="setLoad('moderate')">Umjereno</span>
-                <span class="load-tag heavy" data-load="heavy" onclick="setLoad('heavy')">Teško</span>
-              </div>
-              <div id="match-proximity-warning" class="match-warning no-export" style="display: none"></div>
-            </div>
+            <div id="match-proximity-warning" class="match-warning no-export" style="display: none"></div>
             <div id="blocks-container"></div>
             <div id="blocks-empty" class="empty">Još nema vježbi — dodajte ih ispod ili iz baze vježbi.</div>
-            <div id="planner-editable-2">
             <div
               class="row"
               style="margin-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 14px"
@@ -1479,7 +1450,6 @@
             <div class="row no-print" style="margin-top: 14px">
               <button class="btn ghost" onclick="duplicateFromYesterday()">Kopiraj prethodni trening</button>
               <button class="btn ghost" onclick="clearSession()">Očisti trening</button>
-            </div>
             </div>
           </div>
           <div class="card no-print no-export" id="fatigue-card" style="margin-top: 20px">
@@ -1883,9 +1853,8 @@
             <div class="desc" style="margin: 6px 0 12px" id="load-week-label"></div>
             <div class="desc" style="margin-bottom: 10px">
               Opterećenje = ukupne minute treninga na kojima je igrač bio prisutan, ponderirano težinom treninga (lagano
-              ×1, umjereno ×1.5, teško ×2) — plus odigrane utakmice, računate kao teški trening prema STVARNO odigranim
-              minutama za tog igrača (unosi se kod izvještaja o iscrpljenosti za utakmicu; ako nije uneseno, računa se
-              kao puna utakmica od 90 min).
+              ×1, umjereno ×1.5, teško ×2) — plus odigrane utakmice, koje se računaju kao teški 90-minutni trening (ako
+              je za igrača unesen izvještaj o iscrpljenosti za tu utakmicu).
             </div>
             <table class="results-table">
               <thead>
@@ -1893,8 +1862,7 @@
                   <th>Igrač</th>
                   <th>Treninzi</th>
                   <th>Utakmice</th>
-                  <th>Min. (trening)</th>
-                  <th>Min. (utak.)</th>
+                  <th>Min.</th>
                   <th>Opterećenje</th>
                   <th style="width: 120px">Omjer</th>
                 </tr>
@@ -2328,11 +2296,7 @@
         currentAttDate = e.target.value || todayISO();
         renderAttendance();
       });
-      function isMatchDate(dateISO) {
-        return matches.some((m) => m.date === dateISO);
-      }
       function setAttendance(playerId, status) {
-        if (isMatchDate(currentAttDate)) return;
         if (!attendance[currentAttDate]) attendance[currentAttDate] = {};
         const wasPresent = attendance[currentAttDate][playerId] === "present";
         if (attendance[currentAttDate][playerId] === status) {
@@ -2351,17 +2315,6 @@
       }
       function renderAttendance() {
         const grid = document.getElementById("att-grid");
-        const notice = document.getElementById("att-matchday-notice");
-        if (isMatchDate(currentAttDate)) {
-          notice.style.display = "flex";
-          grid.style.display = "none";
-          grid.innerHTML = "";
-          document.getElementById("att-empty").style.display = "none";
-          document.getElementById("att-summary").innerHTML = "";
-          return;
-        }
-        notice.style.display = "none";
-        grid.style.display = "";
         grid.innerHTML = "";
         document.getElementById("att-empty").style.display = players.length ? "none" : "block";
         const dayData = attendance[currentAttDate] || {};
@@ -2692,15 +2645,6 @@
       }
       function renderPlanner() {
         renderWeekstrip();
-        const notice = document.getElementById("planner-matchday-notice");
-        const editable1 = document.getElementById("planner-editable-1");
-        const editable2 = document.getElementById("planner-editable-2");
-        const fatigueCard = document.getElementById("fatigue-card");
-        const onMatchDay = isMatchDate(currentSessionDate);
-        notice.style.display = onMatchDay ? "flex" : "none";
-        editable1.style.display = onMatchDay ? "none" : "";
-        editable2.style.display = onMatchDay ? "none" : "";
-        fatigueCard.style.display = onMatchDay ? "none" : "";
         fillSketchSelect(document.getElementById("block-sketch"));
         fillCategorySelect(document.getElementById("block-category"));
         setBlockLoad(pendingBlockLoad);
@@ -3240,7 +3184,7 @@
       function setReportField(matchId, playerId, field, value) {
         const m = matches.find((x) => x.id === matchId);
         if (!m) return;
-        if (!m.reports[playerId]) m.reports[playerId] = { fatigue: "", note: "", minutes: "" };
+        if (!m.reports[playerId]) m.reports[playerId] = { fatigue: "", note: "" };
         m.reports[playerId][field] = value;
         store.save("matches", matches);
       }
@@ -3278,10 +3222,10 @@
           "Izvještaj — " + m.opponent + " (" + new Date(m.date + "T00:00:00").toLocaleDateString("hr-HR") + ")";
         reportEmpty.style.display = players.length ? "none" : "block";
         players.forEach((p) => {
-          const rep = m.reports[p.id] || { fatigue: "", note: "", minutes: "" };
+          const rep = m.reports[p.id] || { fatigue: "", note: "" };
           const row = document.createElement("div");
           row.className = "report-row";
-          row.innerHTML = `       <span class="rname">${escapeHtml(p.name)}</span>       <input class="mins-played" type="number" min="0" max="120" placeholder="Min. (90)" title="Odigrane minute (prazno = 90, cijela utakmica)" value="${rep.minutes || ""}" onchange="setReportField('${m.id}','${p.id}','minutes',this.value); renderMatches();">       <select class="fatigue-select" onchange="setReportField('${m.id}','${p.id}','fatigue',this.value); renderMatches();">         <option value="">Odaberi razinu</option>         ${fatigueLevels.map((f) => `<option value="${f.v}" ${rep.fatigue === f.v ? "selected" : ""}>${f.label}</option>`).join("")}       </select>       ${rep.fatigue ? `<span class="fatigue-badge fatigue-${rep.fatigue}">${fatigueLevels.find((f) => f.v === rep.fatigue).label}</span>` : ""}       <input class="note" placeholder="Napomena (bol, ozljeda, opterećenje...)" value="${escapeHtml(rep.note || "")}" onchange="setReportField('${m.id}','${p.id}','note',this.value)">     `;
+          row.innerHTML = `       <span class="rname">${escapeHtml(p.name)}</span>       <select class="fatigue-select" onchange="setReportField('${m.id}','${p.id}','fatigue',this.value); renderMatches();">         <option value="">Odaberi razinu</option>         ${fatigueLevels.map((f) => `<option value="${f.v}" ${rep.fatigue === f.v ? "selected" : ""}>${f.label}</option>`).join("")}       </select>       ${rep.fatigue ? `<span class="fatigue-badge fatigue-${rep.fatigue}">${fatigueLevels.find((f) => f.v === rep.fatigue).label}</span>` : ""}       <input class="note" placeholder="Napomena (bol, ozljeda, opterećenje...)" value="${escapeHtml(rep.note || "")}" onchange="setReportField('${m.id}','${p.id}','note',this.value)">     `;
           reportRows.appendChild(row);
         });
         renderMatchReadiness(m);
@@ -3893,7 +3837,8 @@
         exportSectionPDF("results-report", "izvjestaj-rezultati");
       }
       /* ---------- Opterećenje i prisutnost ---------- */ const LOAD_MULT = { light: 1, moderate: 1.5, heavy: 2 };
-      const MATCH_MINS = 90; // zadano ako trener ne unese stvarne odigrane minute za igrača u toj utakmici
+      const MATCH_MINS = 90;
+      const MATCH_LOAD = Math.round(MATCH_MINS * LOAD_MULT.heavy);
       let loadWeekAnchor = todayISO();
       function shiftLoadWeek(n) {
         const d = new Date(loadWeekAnchor + "T00:00:00");
@@ -3908,9 +3853,7 @@
       function computeWeekLoad(mondayISO) {
         const base = new Date(mondayISO + "T00:00:00");
         const perPlayer = {};
-        players.forEach(
-          (p) => (perPlayer[p.id] = { sessions: 0, matches: 0, trainingMins: 0, matchMins: 0, mins: 0, load: 0 }),
-        );
+        players.forEach((p) => (perPlayer[p.id] = { sessions: 0, matches: 0, mins: 0, load: 0 }));
         for (let i = 0; i < 7; i++) {
           const d = new Date(base);
           d.setDate(base.getDate() + i);
@@ -3925,27 +3868,21 @@
               Object.keys(dayAtt).forEach((pid) => {
                 if (dayAtt[pid] !== "present" || !perPlayer[pid]) return;
                 perPlayer[pid].sessions++;
-                perPlayer[pid].trainingMins += mins;
                 perPlayer[pid].mins += mins;
                 perPlayer[pid].load += loadScore;
               });
             }
           }
           // Utakmice odigrane tog dana (igrač "igrao" = ima unesen izvještaj o iscrpljenosti) ubrajaju se u
-          // tjedno opterećenje kao teški trening — sad prema STVARNO odigranim minutama (ako su unesene za tog
-          // igrača u toj utakmici), a ne uvijek kao puna utakmica od 90 min.
+          // tjedno opterećenje kao teški 90-minutni "trening", jer su fizički najzahtjevniji dio tjedna.
           matches
             .filter((m) => m.date === iso)
             .forEach((m) => {
               Object.keys(m.reports || {}).forEach((pid) => {
                 if (!perPlayer[pid] || !m.reports[pid] || !m.reports[pid].fatigue) return;
-                const enteredMins = parseFloat(m.reports[pid].minutes);
-                const minsPlayed = enteredMins > 0 ? enteredMins : MATCH_MINS;
-                const matchLoad = Math.round(minsPlayed * LOAD_MULT.heavy);
                 perPlayer[pid].matches++;
-                perPlayer[pid].matchMins += minsPlayed;
-                perPlayer[pid].mins += minsPlayed;
-                perPlayer[pid].load += matchLoad;
+                perPlayer[pid].mins += MATCH_MINS;
+                perPlayer[pid].load += MATCH_LOAD;
               });
             });
         }
@@ -3971,14 +3908,14 @@
         body.innerHTML = "";
         document.getElementById("load-empty").style.display = rows.length ? "none" : "block";
         rows.forEach((p) => {
-          const d = perPlayer[p.id] || { sessions: 0, matches: 0, trainingMins: 0, matchMins: 0, mins: 0, load: 0 };
+          const d = perPlayer[p.id] || { sessions: 0, matches: 0, mins: 0, load: 0 };
           let tag = "";
           if (avgLoad > 0 && d.load > avgLoad * 1.3) tag = ' <span class="tag-red">Visoko</span>';
           else if (d.sessions + d.matches > 0 && avgLoad > 0 && d.load < avgLoad * 0.5)
             tag = ' <span class="tag-amber">Nisko</span>';
           const barPct = maxLoad ? Math.round((d.load / maxLoad) * 100) : 0;
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${escapeHtml(p.name)}</td>       <td class="mono">${d.sessions}</td>       <td class="mono">${d.matches}</td>       <td class="mono">${d.trainingMins} min</td>       <td class="mono">${d.matchMins} min</td>       <td class="mono">${d.load}${tag}</td>       <td><div class="load-bar-track"><div class="load-bar-fill" style="width:${barPct}%;"></div></div></td>`;
+          tr.innerHTML = `<td>${escapeHtml(p.name)}</td>       <td class="mono">${d.sessions}</td>       <td class="mono">${d.matches}</td>       <td class="mono">${d.mins} min</td>       <td class="mono">${d.load}${tag}</td>       <td><div class="load-bar-track"><div class="load-bar-fill" style="width:${barPct}%;"></div></div></td>`;
           body.appendChild(tr);
         });
       }
@@ -4072,23 +4009,7 @@
           wrap.appendChild(table);
         });
       }
-      /* ---------- Kartica igrača (PDF) ---------- */
-      // Ukupan broj utakmica i minuta odigranih kroz cijelu sezonu za igrača (isti uvjet "odigrao" kao u
-      // tjednom opterećenju: postoji unesen izvještaj o zamoru za tu utakmicu), za jasan prikaz na kartici.
-      function playerSeasonMatchStats(playerId) {
-        let matchesPlayed = 0,
-          totalMins = 0;
-        matches.forEach((m) => {
-          const rep = m.reports && m.reports[playerId];
-          if (!rep || !rep.fatigue) return;
-          const enteredMins = parseFloat(rep.minutes);
-          const minsPlayed = enteredMins > 0 ? enteredMins : MATCH_MINS;
-          matchesPlayed++;
-          totalMins += minsPlayed;
-        });
-        return { matchesPlayed, totalMins };
-      }
-      function playerBestResults(playerId) {
+      /* ---------- Kartica igrača (PDF) ---------- */ function playerBestResults(playerId) {
         const map = {};
         testResults.forEach((r) => {
           if (r.playerId !== playerId || r.value === null || r.value === undefined) return;
@@ -4158,15 +4079,7 @@
         const today = new Date(todayISO() + "T00:00:00");
         const monday = new Date(today);
         monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-        const weekLoad = computeWeekLoad(toISOLocal(monday))[playerId] || {
-          sessions: 0,
-          matches: 0,
-          trainingMins: 0,
-          matchMins: 0,
-          mins: 0,
-          load: 0,
-        };
-        const seasonMatch = playerSeasonMatchStats(playerId);
+        const weekLoad = computeWeekLoad(toISOLocal(monday))[playerId] || { sessions: 0, mins: 0, load: 0 };
         const best = playerBestResults(playerId);
         const weekdayAbsence = playerAbsenceByWeekday(playerId);
         const typeAbsence = playerAbsenceByType(playerId);
@@ -4188,7 +4101,7 @@
         const wrap = document.createElement("div");
         wrap.style.cssText =
           "position:fixed;left:-99999px;top:0;width:800px;background:var(--pitch-dark);color:var(--chalk);padding:32px;font-family:Inter,sans-serif;";
-        wrap.innerHTML = `     <div style="border-bottom:2px solid var(--accent);padding-bottom:16px;margin-bottom:20px;">       <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:26px;letter-spacing:0.03em;">${escapeHtml(p.name)}</div>       <div style="color:var(--chalk-dim);">${p.number ? "Br. " + escapeHtml(p.number) + " &middot; " : ""}${escapeHtml(p.position || "")}</div>     </div>     <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px;">       <div style="flex:1;min-width:150px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;">         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Prisutnost</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${pct === null ? "-" : pct + "%"}</div>         <div style="font-size:11px;color:var(--chalk-dim);">na treninzima</div>       </div>       <div style="flex:1;min-width:150px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;">         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Treninzi odrađeni</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${attAll.present}</div>         <div style="font-size:11px;color:var(--chalk-dim);">od ${attAll.total} evidentiranih</div>       </div>       <div style="flex:1;min-width:150px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;">         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Minute na utakmicama</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${seasonMatch.totalMins}</div>         <div style="font-size:11px;color:var(--chalk-dim);">${seasonMatch.matchesPlayed} odigranih utakmica</div>       </div>       <div style="flex:1;min-width:150px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;">         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Opterećenje (ovaj tjedan)</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${weekLoad.load}</div>         <div style="font-size:11px;color:var(--chalk-dim);">${weekLoad.sessions} trening(a)${weekLoad.matches ? ", " + weekLoad.matches + " utak." : ""}</div>       </div>     </div>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Najbolji rezultati</div>     <table style="width:100%;border-collapse:collapse;font-size:13px;">       <thead><tr style="text-align:left;color:var(--chalk-dim);text-transform:uppercase;font-size:11px;">         <th style="padding:6px 8px;">Vježba</th><th style="padding:6px 8px;">Rezultat</th><th style="padding:6px 8px;">Datum</th>       </tr></thead>       <tbody>       ${best.length ? best.map((b) => `<tr style="border-top:1px solid rgba(255,255,255,0.08);">           <td style="padding:6px 8px;">${escapeHtml(b.exercise)}</td>           <td style="padding:6px 8px;font-family:'Roboto Mono',monospace;">${b.value} ${escapeHtml(b.unit)}</td>           <td style="padding:6px 8px;font-family:'Roboto Mono',monospace;">${new Date(b.date + "T00:00:00").toLocaleDateString("hr-HR")}</td>         </tr>`).join("") : '<tr><td colspan="3" style="padding:10px 8px;color:var(--chalk-dim);">Još nema unesenih rezultata.</td></tr>'}       </tbody>     </table>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin:24px 0 8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Izostanci — po danu u tjednu</div>     <div style="display:flex;gap:6px;">${weekdayHtml}</div>     <div style="font-size:10px;color:var(--chalk-dim);margin-top:6px;">Broj u kvadratiću = izostanci taj dan u tjednu; boja: zeleno malo, žuto umjereno, crveno puno izostanaka.</div>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin:20px 0 8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Izostanci — po vrsti treninga</div>     ${typeHtml}     <div style="margin-top:24px;font-size:10px;color:var(--chalk-dim);">Generirano ${new Date().toLocaleDateString("hr-HR")} &middot; Trening Menadžer</div>   `;
+        wrap.innerHTML = `     <div style="border-bottom:2px solid var(--accent);padding-bottom:16px;margin-bottom:20px;">       <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:26px;letter-spacing:0.03em;">${escapeHtml(p.name)}</div>       <div style="color:var(--chalk-dim);">${p.number ? "Br. " + escapeHtml(p.number) + " &middot; " : ""}${escapeHtml(p.position || "")}</div>     </div>     <div style="display:flex;gap:32px;margin-bottom:24px;">       <div>         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Prisutnost (ukupno)</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${pct === null ? "-" : pct + "%"}</div>         <div style="font-size:11px;color:var(--chalk-dim);">${attAll.present}/${attAll.total} treninga</div>       </div>       <div>         <div style="color:var(--chalk-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Opterećenje (ovaj tjedan)</div>         <div style="font-size:24px;font-family:'Roboto Mono',monospace;">${weekLoad.load}</div>         <div style="font-size:11px;color:var(--chalk-dim);">${weekLoad.sessions} trening(a), ${weekLoad.mins} min</div>       </div>     </div>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Najbolji rezultati</div>     <table style="width:100%;border-collapse:collapse;font-size:13px;">       <thead><tr style="text-align:left;color:var(--chalk-dim);text-transform:uppercase;font-size:11px;">         <th style="padding:6px 8px;">Vježba</th><th style="padding:6px 8px;">Rezultat</th><th style="padding:6px 8px;">Datum</th>       </tr></thead>       <tbody>       ${best.length ? best.map((b) => `<tr style="border-top:1px solid rgba(255,255,255,0.08);">           <td style="padding:6px 8px;">${escapeHtml(b.exercise)}</td>           <td style="padding:6px 8px;font-family:'Roboto Mono',monospace;">${b.value} ${escapeHtml(b.unit)}</td>           <td style="padding:6px 8px;font-family:'Roboto Mono',monospace;">${new Date(b.date + "T00:00:00").toLocaleDateString("hr-HR")}</td>         </tr>`).join("") : '<tr><td colspan="3" style="padding:10px 8px;color:var(--chalk-dim);">Još nema unesenih rezultata.</td></tr>'}       </tbody>     </table>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin:24px 0 8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Izostanci — po danu u tjednu</div>     <div style="display:flex;gap:6px;">${weekdayHtml}</div>     <div style="font-size:10px;color:var(--chalk-dim);margin-top:6px;">Broj u kvadratiću = izostanci taj dan u tjednu; boja: zeleno malo, žuto umjereno, crveno puno izostanaka.</div>     <div style="font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:15px;margin:20px 0 8px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">Izostanci — po vrsti treninga</div>     ${typeHtml}     <div style="margin-top:24px;font-size:10px;color:var(--chalk-dim);">Generirano ${new Date().toLocaleDateString("hr-HR")} &middot; Trening Menadžer</div>   `;
         document.body.appendChild(wrap);
         try {
           const canvas = await html2canvas(wrap, { backgroundColor: "#122A22", scale: 2 });
